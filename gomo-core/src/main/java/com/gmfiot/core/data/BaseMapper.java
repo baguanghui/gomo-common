@@ -16,11 +16,11 @@ public interface BaseMapper<T extends BaseModel> {
 
     void updateByQuery(T entity,Query query);
 
-    void deleteById(long id);
+    void deleteById(long id,Class<?> clazz);
 
     void deleteByQuery(Query query);
 
-    T selectById(Long id);
+    T selectById(Long id,Class<?> clazz);
 
     List<T> selectList(Query query);
 
