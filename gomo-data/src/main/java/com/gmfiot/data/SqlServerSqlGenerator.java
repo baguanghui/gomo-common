@@ -1,22 +1,26 @@
 package com.gmfiot.data;
 
+import com.gmfiot.core.data.Query;
+import com.gmfiot.core.model.BaseModel;
 import com.gmfiot.core.util.Inflector;
 import com.gmfiot.core.util.ReflectionUtil;
 import com.gmfiot.core.util.StringUtil;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class SqlServerSqlGenerator implements SqlGenerator {
     private final static ConcurrentMap<String,TableInfo> TABLE_MAP;
+    private final static ConcurrentMap<String,QueryInfo> QUERY_MAP;
 
     static {
         TABLE_MAP = new ConcurrentHashMap<>();
+        QUERY_MAP = new ConcurrentHashMap<>();
     }
 
     /**
@@ -61,17 +65,72 @@ public class SqlServerSqlGenerator implements SqlGenerator {
             for (var columnName : tableInfo.getColumns())
             {
                 var getMethod = tableInfo.getGetMethodMap().get(columnName);
-                getMethod.setAccessible(true);
                 var retValue = getMethod.invoke(object);
                 if(retValue != null){
                     notNullColumnList.add(columnName);
                 }
             }
-        } catch (InvocationTargetException e){
-            e.printStackTrace();
-        } catch (IllegalAccessException e){
+        } catch (Exception e){
             e.printStackTrace();
         }
         return notNullColumnList;
     }
+
+    public static QueryInfo getQueryInfo(Class<?> clazz){
+        var queryInfo = QUERY_MAP.get(clazz.getName());
+        if(queryInfo == null){
+            var typeName = clazz.getName();
+            var fieldList = ReflectionUtil.getAllFields(clazz);
+            queryInfo = new QueryInfo();
+            queryInfo.setTypeName(typeName);
+            queryInfo.setProperties(fieldList);
+            var getMethodMap = new HashMap<String, Method>();
+            fieldList.stream().forEach(fieldName -> {
+                try {
+                    var getMethod = clazz.getMethod("get" + StringUtil.toCapName(fieldName));
+                    getMethodMap.put(fieldName,getMethod);
+                } catch (NoSuchMethodException e) {
+                    e.printStackTrace();
+                }
+            });
+            queryInfo.setGetMethodMap(getMethodMap);
+            QUERY_MAP.putIfAbsent(typeName,queryInfo);
+        }
+        return queryInfo;
+    }
+
+    public static Map<String,Object> getPropertyNameValueMapForQuery(Object object) {
+        Map<String,Object> propertyMap = new HashMap<>();
+        var clazz = object.getClass();
+        var queryInfo = QUERY_MAP.get(clazz.getName());
+        try {
+            for (var propertyName : queryInfo.getProperties())
+            {
+                var getMethod = queryInfo.getGetMethodMap().get(propertyName);
+                var retValue = getMethod.invoke(object);
+                if(retValue != null){
+                    propertyMap.putIfAbsent(propertyName,retValue);
+                }
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return propertyMap;
+    }
+
+    public static String buildOrderBySql(Query query, Class<? extends BaseModel> clazz){
+        if(query == null){
+            return "";
+        }
+//        var queryNotNullProperties = getNotNullPropertyMap(query);
+        StringBuilder stringBuilder = new StringBuilder();
+        return  stringBuilder.toString();
+    }
+
+    public static String buildWheresSql(Query query, Class<? extends BaseModel> clazz){
+        var queryNotNullProperties = getNotNullColumns(query);
+
+        return  "";
+    }
+
 }

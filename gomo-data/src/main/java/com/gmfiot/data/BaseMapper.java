@@ -1,5 +1,7 @@
-package com.gmfiot.core.data;
+package com.gmfiot.data;
 
+import com.gmfiot.core.data.Paged;
+import com.gmfiot.core.data.Query;
 import com.gmfiot.core.model.BaseModel;
 
 import java.util.List;
@@ -10,15 +12,15 @@ import java.util.List;
  */
 public interface BaseMapper<T extends BaseModel> {
 
-    void insert(T entity);
+    Integer insert(T entity);
 
-    void updateById(T entity);
+    Integer updateById(T entity);
 
-    void updateByQuery(T entity,Query query);
+    Integer updateByQuery(T entity, Query query);
 
-    void deleteById(long id,Class<?> clazz);
+    Integer deleteById(long id,Class<?> clazz);
 
-    void deleteByQuery(Query query);
+    Integer deleteByQuery(Query query);
 
     T selectById(Long id,Class<?> clazz);
 

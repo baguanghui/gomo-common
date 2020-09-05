@@ -52,4 +52,14 @@ public class User extends BaseModel {
         this.directory = directory;
     }
 
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", status=" + status +
+                ", failures=" + failures +
+                ", referenceId='" + referenceId + '\'' +
+                ", directory=" + directory +
+                "} " + super.toString();
+    }
 }

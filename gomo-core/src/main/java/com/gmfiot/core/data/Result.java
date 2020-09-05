@@ -35,6 +35,11 @@ public class Result<T> implements Serializable {
         return result;
     }
 
+    public static Result success(String msg){
+        Result result = new Result(200,msg);
+        return result;
+    }
+
     public static Result fail(String msg){
         return fail(400,msg);
     }

@@ -1,7 +1,8 @@
 package com.gmfiot.core.util;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
+import com.gmfiot.core.data.Result;
+
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,13 +46,16 @@ public class ReflectionUtil {
      */
     public static List<String> getAllFields(Class<?> clazz){
         List<String> fieldList = new ArrayList<>();
-        for (var field : clazz.getSuperclass().getDeclaredFields())
-        {
-            fieldList.add(field.getName());
-        }
-        for (var field : clazz.getDeclaredFields())
-        {
-            fieldList.add(field.getName());
+        while (clazz != null){
+            for (var field : clazz.getDeclaredFields())
+            {
+                fieldList.add(field.getName());
+            }
+            if(clazz.getSuperclass() == Object.class)
+            {
+                break;
+            }
+            clazz =  clazz.getSuperclass();
         }
         return fieldList;
     }
@@ -69,7 +73,7 @@ public class ReflectionUtil {
             for(var fieldName : fieldList)
             {
                 var method = clazz.getMethod("get" + StringUtil.toCapName(fieldName));
-                method.setAccessible(true);
+                //method.setAccessible(true);
                 var retValue = method.invoke(object);
                 if(retValue != null){
                     notNullfieldList.add(fieldName);
@@ -148,51 +152,11 @@ public class ReflectionUtil {
         return  methodName;
     }
 
+
     public static void main(String[] args) throws InterruptedException {
         var user = new User();
         user.setName("张三");
         user.setId(9000011L);
         user.setCreatedAt(new Date());
-//        user.setStatus(1);
-//        user.setDirectory(2);
-//        user.setReferenceId("Refer");
-//        user.setFailures(1);
-//
-//        var fieldList = getNotNullFields(user);
-//        System.out.println(fieldList);
-        //System.out.println(Inflector.plural("",""););
-
-
-//        StringBuffer sql = new StringBuffer("insert into users(");
-//        var fieldList = ReflectionUtil.getNotNullFields(user);
-//        var columnStr = String.join(",",fieldList);
-//        sql.append(columnStr);
-//        sql.append(") values (");
-//        List<String> values = fieldList.stream().map(field -> String.format("#{%s}",field)).collect(Collectors.toList());
-//        var valueStr = String.join(",",values);
-//        sql.append(valueStr);
-//        sql.append(")");
-//        System.out.println(sql.toString());
-//
-//        var testUser = new TestUser(){
-//            {
-//                setId();
-//            }
-//        };
-
-       Map<String,String> map = new HashMap<>(){
-           {
-               put("a","1");
-               put("b","2");
-           }
-       };
-       System.out.println( map );
-       System.out.printf("Hi,%s,%s,%s","张三","李四","王五");
-    }
-}
-
-class TestUser{
-    public void setId(){
-
     }
 }

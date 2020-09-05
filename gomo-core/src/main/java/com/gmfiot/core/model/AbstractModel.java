@@ -15,4 +15,11 @@ public abstract class AbstractModel extends BaseModel {
     public void setLastModifiedAt(Date lastModifiedAt) {
         this.lastModifiedAt = lastModifiedAt;
     }
+
+    @Override
+    public String toString() {
+        return "AbstractModel{" +
+                "lastModifiedAt=" + lastModifiedAt +
+                "} " + super.toString();
+    }
 }

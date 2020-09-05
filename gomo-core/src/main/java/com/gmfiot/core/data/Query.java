@@ -4,25 +4,34 @@ package com.gmfiot.core.data;
  * 数据查询抽象类，用户表查询
  * @author ThinkPad
  */
-public abstract class Query {
+public class Query {
 
-    private int skip;
-    private int take = 20;
-    private String orderBy;
+    private Integer skip;
+    private Integer limit = 20;
+    private Integer take = 20;
+    private String orderBy = "id desc";
 
-    public int getSkip() {
+    public Integer getSkip() {
         return skip;
     }
 
-    public void setSkip(int skip) {
+    public void setSkip(Integer skip) {
         this.skip = skip;
     }
 
-    public int getTake() {
+    public Integer getLimit() {
+        return limit;
+    }
+
+    public void setLimit(Integer limit) {
+        this.limit = limit;
+    }
+
+    public Integer getTake() {
         return take;
     }
 
-    public void setTake(int take) {
+    public void setTake(Integer take) {
         this.take = take;
     }
 

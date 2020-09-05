@@ -3,7 +3,6 @@ package com.gmfiot.core.util;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
-import com.gmfiot.core.data.Result;
 
 import java.util.*;
 
@@ -33,12 +32,12 @@ public class JsonUtil {
         return null;
     }
 
-    public static <T> T toObject(String jsonData, Class<T> type) {
+    public static <T> T toObject(String jsonData, Class<?> clazz) {
         if(StringUtil.isBlank(jsonData)){
             return null;
         }
         try {
-            T t = OBJECT_MAPPER.readValue(jsonData, type);
+            T t = (T)OBJECT_MAPPER.readValue(jsonData, clazz);
             return t;
         } catch (Exception e) {
             e.printStackTrace();
@@ -46,22 +45,17 @@ public class JsonUtil {
         return null;
     }
 
-    public static <T> List<T> toList(String jsonData, Class<T> tClass) {
-        JavaType javaType = OBJECT_MAPPER.getTypeFactory().constructParametricType(List.class, tClass);
-        try {
-            List<T> list = OBJECT_MAPPER.readValue(jsonData, javaType);
-            return list;
-        } catch (Exception e) {
-            e.printStackTrace();
+    public static <T> T toObject(String jsonData, Class<?> clazz, Class<?> parametricClass) {
+        if(parametricClass == null){
+            return toObject(jsonData,clazz);
         }
-        return null;
-    }
-
-    public static <T> Result<T> toResult(String jsonData, Class<T> tClass) {
-        JavaType javaType = OBJECT_MAPPER.getTypeFactory().constructParametricType(Result.class, tClass);
+        if(StringUtil.isBlank(jsonData)){
+            return null;
+        }
+        JavaType javaType = OBJECT_MAPPER.getTypeFactory().constructParametricType(clazz, parametricClass);
         try {
-            Result<T> list = OBJECT_MAPPER.readValue(jsonData, javaType);
-            return list;
+            T t =(T)OBJECT_MAPPER.readValue(jsonData, javaType);
+            return t;
         } catch (Exception e) {
             e.printStackTrace();
         }

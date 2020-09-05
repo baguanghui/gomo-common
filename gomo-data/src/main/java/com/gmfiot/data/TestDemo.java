@@ -3,9 +3,9 @@ package com.gmfiot.data;
 import com.gmfiot.core.util.ReflectionUtil;
 import com.gmfiot.core.util.User;
 
-import java.util.Date;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.*;
+
+import static java.util.stream.Collectors.toList;
 
 public class TestDemo {
     public static void main(String[] args) {
@@ -19,9 +19,11 @@ public class TestDemo {
         var insertSql = insert(user);
         user.setStatus(1);
         user.setCreatedAt(new Date());
-        var updateSql = update(user);
 
-        System.out.println("执行" +TestDemo.class.getSimpleName()+ ":" + new Exception().getStackTrace()[0].getClassName());
+        var nullColumns = SqlServerSqlGenerator.getNotNullColumns(user);
+
+
+        var updateSql = update(user);
 
         var deleteSql = deleteById(10001L,User.class);
 
@@ -47,7 +49,7 @@ public class TestDemo {
         var columnStr = String.join(",",columnList);
         sql.append(columnStr);
         sql.append(") values (");
-        List<String> values = columnList.stream().map(field -> String.format("#{%s}",field)).collect(Collectors.toList());
+        List<String> values = columnList.stream().map(field -> String.format("#{%s}",field)).collect(toList());
         var valueStr = String.join(",",values);
         sql.append(valueStr);
         sql.append(")");
@@ -57,7 +59,7 @@ public class TestDemo {
     public static String update(User user) {
         var tableInfo = SqlServerSqlGenerator.getTableInfo(user.getClass());
         StringBuffer sql = new StringBuffer(String.format("UPDATE %s SET ",tableInfo.getTableName()));
-        List<String> values = SqlServerSqlGenerator.getNotNullColumns(user).stream().map(field -> String.format("%s = #{%s}",field,field)).collect(Collectors.toList());
+        List<String> values = SqlServerSqlGenerator.getNotNullColumns(user).stream().map(field -> String.format("%s = #{%s}",field,field)).collect(toList());
         var valueStr = String.join(",",values);
         sql.append(valueStr);
         sql.append(" WHERE Id = #{id}");

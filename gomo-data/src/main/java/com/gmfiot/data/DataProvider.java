@@ -1,4 +1,4 @@
-package com.gmfiot.core.data;
+package com.gmfiot.data;
 
 import com.gmfiot.core.data.Paged;
 import com.gmfiot.core.data.Query;
