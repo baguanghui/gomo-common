@@ -1,8 +1,12 @@
 package com.gmfiot.data;
 
 import com.gmfiot.core.util.ReflectionUtil;
-import com.gmfiot.core.util.User;
+import com.gmfiot.data.sql.SqlClauseTypeEnum;
+import com.gmfiot.data.sql.SqlServerSqlBuilder;
+import com.gmfiot.data.sql.SqlTypeEnum;
 
+import java.sql.PreparedStatement;
+import java.time.Instant;
 import java.util.*;
 
 import static java.util.stream.Collectors.toList;
@@ -16,24 +20,60 @@ public class TestDemo {
         var user = new User();
         user.setId(10001L);
         user.setName("张三");
-        var insertSql = insert(user);
         user.setStatus(1);
         user.setCreatedAt(new Date());
 
-        var nullColumns = SqlServerSqlGenerator.getNotNullColumns(user);
+//        var nullColumns = SqlServerSqlGenerator.getNotNullColumns(user);
+//
+//        var updateSql = update(user);
+//
+//        var deleteSql = deleteById(10001L,User.class);
 
+        //var selectByIdSql = selectById(10001L,User.class);
 
-        var updateSql = update(user);
+        var userQuery = new UserQuery();
+        userQuery.setId(10001L);
+        userQuery.setIds(new Long[]{1L,2L,3L});
+        userQuery.setName("张三");
+//        userQuery.setIdsNotIn(new Long[]{1L,2L,3L});
+//        userQuery.setName("张三");
+//        userQuery.setNameNotEquals("李四");
+//        userQuery.setNameContains("李四");
+//        userQuery.setNameIsNull(true);
+//        userQuery.setNameEndsWith("ends");
+//        userQuery.setNameStartsWith("starts");
+//        userQuery.setNameNotContains("notContains");
+//        userQuery.setCreatedAtFrom(new Date());
+//        userQuery.setCreatedAtTo(new Date());
+//        userQuery.setCreatedAtGreaterThan(new Date());
+//        userQuery.setCreatedAtLessThan(new Date());
+//        userQuery.setNames(new String[]{"张三","李四"});
 
-        var deleteSql = deleteById(10001L,User.class);
+        userQuery.setOrId(1002L);
+        userQuery.setOrName("张三");
 
-        String className = Thread.currentThread().getStackTrace()[1].getClassName();//调用的类名
-        String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();//调用的方法名
-        int lineNumber = Thread.currentThread().getStackTrace()[1].getLineNumber();//调用的行数
-
-        var selectByIdSql = selectById(10001L,User.class);
-
+        var sql =  SqlServerSqlBuilder
+                .getBuilder(user,userQuery)
+                .build(SqlTypeEnum.SELECT)
+                .build(SqlClauseTypeEnum.WHERE)
+                .build(SqlClauseTypeEnum.ORDERBY)
+                .build(SqlClauseTypeEnum.OFFSET_FETCH)
+                .toString();
+        System.out.println(sql);
     }
+
+    public static String getName(User u){
+//        Optional<User> user = Optional.ofNullable(u);
+//        if(!user.isPresent()){
+//            return "Unknow";
+//        }
+        return Optional.ofNullable(u)
+                .map(user -> user.getName())
+                .orElse("Unknow");
+        //return user.get().getName();
+    }
+
+
 
     private static String getExecutingMethodName()
     {
@@ -42,43 +82,14 @@ public class TestDemo {
         return e.getMethodName();
     }
 
-    public static String insert(User user) {
-        var tableInfo = SqlServerSqlGenerator.getTableInfo(user.getClass());
-        StringBuffer sql = new StringBuffer(String.format("insert into %s(",tableInfo.getTableName()));
-        var columnList = SqlServerSqlGenerator.getNotNullColumns(user);
-        var columnStr = String.join(",",columnList);
-        sql.append(columnStr);
-        sql.append(") values (");
-        List<String> values = columnList.stream().map(field -> String.format("#{%s}",field)).collect(toList());
-        var valueStr = String.join(",",values);
-        sql.append(valueStr);
-        sql.append(")");
+    /*
+    public String selectByQuery(UserQuery query) {
+        QueryInfo queryInfo = SqlServerSqlGenerator.getQueryInfo(query.getClass());
+        SqlServerSqlGenerator.getPropertyNameValueMapForQuery()
+        StringBuffer sql = new StringBuffer("select * from users where 1=1 ");
+        if(!query.getName().isBlank()) {
+            sql.append(String.format("and username like '%s'", "%"+query.getName()+"%"));
+        }
         return sql.toString();
-    }
-
-    public static String update(User user) {
-        var tableInfo = SqlServerSqlGenerator.getTableInfo(user.getClass());
-        StringBuffer sql = new StringBuffer(String.format("UPDATE %s SET ",tableInfo.getTableName()));
-        List<String> values = SqlServerSqlGenerator.getNotNullColumns(user).stream().map(field -> String.format("%s = #{%s}",field,field)).collect(toList());
-        var valueStr = String.join(",",values);
-        sql.append(valueStr);
-        sql.append(" WHERE Id = #{id}");
-        return  sql.toString();
-    }
-
-    public static String deleteById(long id,Class<?> clazz) {
-        String methodName = ReflectionUtil.getCurrentMethodName();
-        //var TestDemo.class.getDeclaredMethod(methodName);
-        var tableInfo = SqlServerSqlGenerator.getTableInfo(clazz);
-        var sql = String.format("DELETE %s WHERE Id = #{id}",tableInfo.getTableName());
-        return  sql;
-    }
-
-    public static String selectById(Long id,Class<?> clazz) {
-        String methodName = ReflectionUtil.getCurrentMethodName();
-        var tableInfo = SqlServerSqlGenerator.getTableInfo(clazz);
-        var columnStr = String.join(",",tableInfo.getColumns());
-        var sql = String.format("SELECT %s FROM %s WHERE Id = #{id}",columnStr,tableInfo.getTableName());
-        return sql;
-    }
+    }*/
 }

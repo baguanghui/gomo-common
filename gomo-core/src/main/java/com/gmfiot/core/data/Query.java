@@ -6,8 +6,7 @@ package com.gmfiot.core.data;
  */
 public class Query {
 
-    private Integer skip;
-    private Integer limit = 20;
+    private Integer skip = 0;
     private Integer take = 20;
     private String orderBy = "id desc";
 
@@ -17,14 +16,6 @@ public class Query {
 
     public void setSkip(Integer skip) {
         this.skip = skip;
-    }
-
-    public Integer getLimit() {
-        return limit;
-    }
-
-    public void setLimit(Integer limit) {
-        this.limit = limit;
     }
 
     public Integer getTake() {

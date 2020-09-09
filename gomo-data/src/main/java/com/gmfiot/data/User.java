@@ -1,15 +1,22 @@
-package com.gmfiot.core.util;
+package com.gmfiot.data;
 
 import com.gmfiot.core.model.BaseModel;
+import com.gmfiot.data.annotation.Column;
+import com.gmfiot.data.annotation.Table;
 
 /**
  * @author ThinkPad
  */
+@Table(name = "user_info")
 public class User extends BaseModel {
+    @Column(name = "my_name")
     private String name;
     private Integer status;
     private Integer failures;
+
+    @Column(name = "reference_Id")
     private String referenceId;
+
     private Integer directory;
 
     public String getName() {

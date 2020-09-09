@@ -1,11 +1,8 @@
 package com.gmfiot.core.util;
 
-import com.gmfiot.core.data.Result;
-
 import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author ThinkPad
@@ -61,6 +58,28 @@ public class ReflectionUtil {
     }
 
     /**
+     * 获取指定名字的字段类型
+     * @param clazz
+     * @return
+     */
+    public static Field getField(Class<?> clazz,String fieldName){
+        while (clazz != null){
+            for (var field : clazz.getDeclaredFields())
+            {
+                if(field.getName().equals(fieldName)){
+                    return field;
+                }
+            }
+            if(clazz.getSuperclass() == Object.class)
+            {
+                break;
+            }
+            clazz =  clazz.getSuperclass();
+        }
+        return null;
+    }
+
+    /**
      * 获取所有非空字段名
      * @param object
      * @return
@@ -72,7 +91,7 @@ public class ReflectionUtil {
         try {
             for(var fieldName : fieldList)
             {
-                var method = clazz.getMethod("get" + StringUtil.toCapName(fieldName));
+                var method = clazz.getMethod("get" + StringUtil.toUpperCaseFirstLetter(fieldName));
                 //method.setAccessible(true);
                 var retValue = method.invoke(object);
                 if(retValue != null){
@@ -154,9 +173,5 @@ public class ReflectionUtil {
 
 
     public static void main(String[] args) throws InterruptedException {
-        var user = new User();
-        user.setName("张三");
-        user.setId(9000011L);
-        user.setCreatedAt(new Date());
     }
 }

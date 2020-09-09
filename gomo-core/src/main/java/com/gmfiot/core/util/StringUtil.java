@@ -14,9 +14,20 @@ public class StringUtil {
      * @param str
      * @return
      */
-    public static String toCapName(String str){
+    public static String toUpperCaseFirstLetter(String str){
         char[] cs=str.toCharArray();
         cs[0]-=32;
+        return String.valueOf(cs);
+    }
+
+    /**
+     * 字符串首字母转小写
+     * @param str
+     * @return
+     */
+    public static String toLowerCaseFirstLetter(String str){
+        char[] cs=str.toCharArray();
+        cs[0]+=32;
         return String.valueOf(cs);
     }
 }
