@@ -6,6 +6,7 @@ import java.util.Map;
 
 public class QueryInfo {
     private String typeName;
+    private Class modelClass;
     private List<String> fields;
     private Map<String, Method> getMethodMap;
     private Map<String,String> conditionNameMap;
@@ -40,5 +41,13 @@ public class QueryInfo {
 
     public void setConditionNameMap(Map<String, String> conditionNameMap) {
         this.conditionNameMap = conditionNameMap;
+    }
+
+    public Class getModelClass() {
+        return modelClass;
+    }
+
+    public void setModelClass(Class modelClass) {
+        this.modelClass = modelClass;
     }
 }

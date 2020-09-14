@@ -9,6 +9,7 @@ public class Query {
     private Integer skip = 0;
     private Integer take = 20;
     private String orderBy = "id desc";
+    //private Class modelClass;
 
     public Integer getSkip() {
         return skip;
@@ -33,4 +34,12 @@ public class Query {
     public void setOrderBy(String orderBy) {
         this.orderBy = orderBy;
     }
+
+//    public Class getModelClass() {
+//        return modelClass;
+//    }
+//
+//    public void setModelClass(Class modelClass) {
+//        this.modelClass = modelClass;
+//    }
 }

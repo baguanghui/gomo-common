@@ -7,14 +7,12 @@ import com.gmfiot.data.annotation.Table;
 /**
  * @author ThinkPad
  */
-@Table(name = "user_info")
-public class User extends BaseModel {
-    @Column(name = "my_name")
+public class TUser extends BaseModel {
+
     private String name;
     private Integer status;
     private Integer failures;
 
-    @Column(name = "reference_Id")
     private String referenceId;
 
     private Integer directory;

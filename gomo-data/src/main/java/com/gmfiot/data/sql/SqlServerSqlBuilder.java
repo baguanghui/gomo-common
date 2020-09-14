@@ -1,5 +1,6 @@
 package com.gmfiot.data.sql;
 
+import com.gmfiot.core.BusinessException;
 import com.gmfiot.core.util.Inflector;
 import com.gmfiot.core.util.ReflectionUtil;
 import com.gmfiot.core.util.StringUtil;
@@ -11,6 +12,8 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
@@ -26,6 +29,10 @@ public class SqlServerSqlBuilder implements SqlBuilder {
     private Class modelClass;
     private Object model;
     private Object query;
+    //springJdbc
+    private String usedFor = "mybatis";
+    //:%s
+    private String placeholdSign = "#{%s}";
 
     static {
         TABLE_MAP = new ConcurrentHashMap<>();
@@ -34,11 +41,19 @@ public class SqlServerSqlBuilder implements SqlBuilder {
 
     public SqlServerSqlBuilder(){}
 
-    public SqlServerSqlBuilder(Class mClass, Object model, Object query){
-        this.sqlStringBuilder = new StringBuilder();
-        this.modelClass = mClass;
+    public SqlServerSqlBuilder(Class modelClass, Object model, Object query){
         this.model = model;
         this.query = query;
+        this.sqlStringBuilder = new StringBuilder();
+        if(modelClass == null && query != null){
+            var queryInfo = getQueryInfo(query.getClass());
+            if(queryInfo.getModelClass() == null){
+                throw new BusinessException("modelClass field is missing");
+            }
+            this.modelClass = queryInfo.getModelClass();
+        } else {
+            this.modelClass = modelClass;
+        }
     }
 
     @Override
@@ -57,15 +72,6 @@ public class SqlServerSqlBuilder implements SqlBuilder {
             case SELECT:
                 buildSelect();
                 break;
-            default:
-                throw new UnsupportedOperationException("Unsupported SqlTypeEnum");
-        }
-        return this;
-    }
-
-    @Override
-    public SqlBuilder build(SqlClauseTypeEnum sqlClauseTypeEnum) {
-        switch (sqlClauseTypeEnum){
             case WHERE:
                 buildWhere();
                 break;
@@ -85,7 +91,7 @@ public class SqlServerSqlBuilder implements SqlBuilder {
                 buildHaving();
                 break;
             default:
-                throw new UnsupportedOperationException("Unsupported SqlClauseTypeEnum");
+                throw new UnsupportedOperationException("Unsupported SqlTypeEnum");
         }
         return this;
     }
@@ -95,18 +101,23 @@ public class SqlServerSqlBuilder implements SqlBuilder {
         return sqlBuilder;
     }
 
-    public static <M, Q> SqlBuilder getBuilder(Class<M> mClass, Q query) {
-        var sqlBuilder = new SqlServerSqlBuilder(mClass,null,query);
+    public static <M, Q> SqlBuilder getBuilder(Class<M> modelClass, Q query) {
+        var sqlBuilder = new SqlServerSqlBuilder(modelClass,null,query);
         return sqlBuilder;
     }
 
-    public static <M, Q> SqlBuilder getBuilder(M model) {
+    public static <M> SqlBuilder getBuilder(M model) {
         var sqlBuilder = new SqlServerSqlBuilder(model.getClass(),model,null);
         return sqlBuilder;
     }
 
-    public static <M, Q> SqlBuilder getBuilder(Class<M> mClass) {
-        var sqlBuilder = new SqlServerSqlBuilder(mClass,null,null);
+    public static <M> SqlBuilder getBuilder(Class<M> modelClass) {
+        var sqlBuilder = new SqlServerSqlBuilder(modelClass,null,null);
+        return sqlBuilder;
+    }
+
+    public static SqlBuilder getBuilderForQuery(Object query) {
+        var sqlBuilder = new SqlServerSqlBuilder(null,null,query);
         return sqlBuilder;
     }
 
@@ -218,6 +229,7 @@ public class SqlServerSqlBuilder implements SqlBuilder {
             queryInfo = new QueryInfo();
             queryInfo.setTypeName(typeName);
             queryInfo.setFields(fieldList);
+
             var getMethodMap = new HashMap<String, Method>();
             var conditionNameMap = new HashMap<String,String>();
 
@@ -237,6 +249,23 @@ public class SqlServerSqlBuilder implements SqlBuilder {
                     e.printStackTrace();
                 }
             });
+
+            if(modelClass == null){
+                var getModelClassMothod = getMethodMap.get("modelClass");
+                if(getModelClassMothod != null){
+                    try{
+                        var retValue = getModelClassMothod.invoke(query);
+                        if(retValue != null){
+                            queryInfo.setModelClass((Class)retValue);
+                        }
+                    }catch (Exception ex){
+                        ex.printStackTrace();
+                    }
+                }
+            }else {
+                queryInfo.setModelClass(modelClass);
+            }
+
             queryInfo.setGetMethodMap(getMethodMap);
             queryInfo.setConditionNameMap(conditionNameMap);
             QUERY_MAP.putIfAbsent(typeName,queryInfo);
@@ -325,7 +354,7 @@ public class SqlServerSqlBuilder implements SqlBuilder {
         }
     }
 
-    private final static List<String> PAGED_FIELDS = List.of("skip","take","orderBy");
+    private final static List<String> PAGED_FIELDS = List.of("skip","take","orderBy","modelClass");
     private final static String OR_SIGN = SqlConditionTypeEnum.OR.getName();
     private final static String AND_SIGN = SqlConditionTypeEnum.AND.getName();
 

@@ -4,7 +4,7 @@ import com.gmfiot.core.data.Query;
 
 import java.util.Date;
 
-public class UserQuery extends Query {
+public class TUserQuery extends Query {
     //分页
     //跳过多少条记录
 //    private Integer skip;

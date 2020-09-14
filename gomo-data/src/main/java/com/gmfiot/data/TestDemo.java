@@ -1,15 +1,9 @@
 package com.gmfiot.data;
 
-import com.gmfiot.core.util.ReflectionUtil;
-import com.gmfiot.data.sql.SqlClauseTypeEnum;
 import com.gmfiot.data.sql.SqlServerSqlBuilder;
 import com.gmfiot.data.sql.SqlTypeEnum;
 
-import java.sql.PreparedStatement;
-import java.time.Instant;
 import java.util.*;
-
-import static java.util.stream.Collectors.toList;
 
 public class TestDemo {
     public static void main(String[] args) {
@@ -17,7 +11,7 @@ public class TestDemo {
 //        tableInfo = SqlServerSqlGenerator.getTableInfo(User.class);
         //System.out.println(tableInfo);
 
-        var user = new User();
+        var user = new TUser();
         user.setId(10001L);
         user.setName("张三");
         user.setStatus(1);
@@ -31,7 +25,7 @@ public class TestDemo {
 
         //var selectByIdSql = selectById(10001L,User.class);
 
-        var userQuery = new UserQuery();
+        var userQuery = new TUserQuery();
         userQuery.setId(10001L);
         userQuery.setIds(new Long[]{1L,2L,3L});
         userQuery.setName("张三");
@@ -51,18 +45,20 @@ public class TestDemo {
 
         userQuery.setOrId(1002L);
         userQuery.setOrName("张三");
+        //userQuery.setModelClass(TUser.class);
 
         var sql =  SqlServerSqlBuilder
-                .getBuilder(user,userQuery)
-                .build(SqlTypeEnum.SELECT)
-                .build(SqlClauseTypeEnum.WHERE)
-                .build(SqlClauseTypeEnum.ORDERBY)
-                .build(SqlClauseTypeEnum.OFFSET_FETCH)
+                //.getBuilderForQuery(userQuery)
+                .getBuilder(TUser.class)
+                .build(SqlTypeEnum.DELETE)
+//                .build(SqlTypeEnum.WHERE)
+//                .build(SqlTypeEnum.ORDERBY)
+                //.build(SqlTypeEnum.OFFSET_FETCH)
                 .toString();
         System.out.println(sql);
     }
 
-    public static String getName(User u){
+    public static String getName(TUser u){
 //        Optional<User> user = Optional.ofNullable(u);
 //        if(!user.isPresent()){
 //            return "Unknow";

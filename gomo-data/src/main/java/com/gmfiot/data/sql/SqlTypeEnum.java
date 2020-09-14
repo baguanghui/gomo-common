@@ -4,5 +4,11 @@ public enum SqlTypeEnum {
     INSERT,
     DELETE,
     UPDATE,
-    SELECT
+    SELECT,
+    WHERE,
+    ORDERBY,
+    TOP,
+    OFFSET_FETCH,
+    GROUPBY,
+    HAVING
 }
