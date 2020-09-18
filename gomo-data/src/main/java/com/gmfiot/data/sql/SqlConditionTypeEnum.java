@@ -1,5 +1,8 @@
 package com.gmfiot.data.sql;
 
+/**
+ * @author BaGuangHui
+ */
 public enum SqlConditionTypeEnum {
     AND("AND","逻辑与条件"),
     OR("OR","逻辑或条件");

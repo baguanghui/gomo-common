@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.*;
 
 import java.util.*;
 
+/**
+ * @author BaGuangHui
+ */
 public class JsonUtil {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

@@ -2,7 +2,8 @@ package com.gmfiot.core.data;
 
 /**
  * 数据查询抽象类，用户表查询
- * @author ThinkPad
+ * @author BaGuangHui
+ *
  */
 public class Query {
 

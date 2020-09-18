@@ -2,6 +2,9 @@ package com.gmfiot.data.sql;
 
 import java.util.Map;
 
+/**
+ * @author BaGuangHui
+ */
 public class TableInfo {
     private String name;
     private String schema;

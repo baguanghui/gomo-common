@@ -4,17 +4,19 @@ import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.util.*;
 
+
 /**
- * @author ThinkPad
+ * @author BaGuangHui
  */
 public class ReflectionUtil {
+
     /**
      * 反射创建对象
      * @param
      * @param <T>
      * @return
      */
-    public static <T> T getObject(Class<T> tClass){
+    public static <T> T newInstance(Class<T> tClass){
         T obj = null;
         try {
             obj = tClass.getConstructor().newInstance();
@@ -25,13 +27,13 @@ public class ReflectionUtil {
     }
 
     /**
-     * 获泛型数组
+     * 获得泛型数组
      * @param tClass
      * @param n
      * @param <T>
      * @return
      */
-    public static <T> T[] getObjectArray(Class<T> tClass, int n){
+    public static <T> T[] newObjectArray(Class<T> tClass, int n){
         var array = (T[])Array.newInstance(tClass,n);
         return  array;
     }
@@ -80,7 +82,7 @@ public class ReflectionUtil {
     }
 
     /**
-     * 获取所有非空字段名
+     * 获取所有非空字段名List
      * @param object
      * @return
      */
@@ -91,21 +93,41 @@ public class ReflectionUtil {
         try {
             for(var fieldName : fieldList)
             {
-                var method = clazz.getMethod("get" + StringUtil.toUpperCaseFirstLetter(fieldName));
-                //method.setAccessible(true);
+                var method = clazz.getMethod("get" + StringUtil.capitalize(fieldName));
                 var retValue = method.invoke(object);
                 if(retValue != null){
                     notNullfieldList.add(fieldName);
                 }
             }
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e){
-            e.printStackTrace();
-        } catch (IllegalAccessException e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return notNullfieldList;
+    }
+
+
+    /**
+     * 获取所有非空的字段名，字段值字典Map
+     * @param object
+     * @return
+     */
+    public static Map<String,Object> getNotNullFieldValueMap(Object object) {
+        Map<String,Object> notNullFieldValueMap = new HashMap<>();
+        var clazz = object.getClass();
+        var fieldList = getAllFields(clazz);
+        try {
+            for(var fieldName : fieldList)
+            {
+                var method = clazz.getMethod("get" + StringUtil.capitalize(fieldName));
+                var retValue = method.invoke(object);
+                if(retValue != null){
+                    notNullFieldValueMap.putIfAbsent(fieldName,retValue);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return notNullFieldValueMap;
     }
 
     /**
@@ -169,9 +191,5 @@ public class ReflectionUtil {
     public static String getCurrentMethodName(){
         String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
         return  methodName;
-    }
-
-
-    public static void main(String[] args) throws InterruptedException {
     }
 }

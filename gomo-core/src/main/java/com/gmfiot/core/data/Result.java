@@ -5,7 +5,7 @@ import com.gmfiot.core.StatusCodeEnum;
 import java.io.Serializable;
 
 /**
- * @author ThinkPad
+ * @author BaGuangHui
  */
 public class Result<T> implements Serializable {
     private int statusCode;

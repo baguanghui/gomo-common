@@ -1,4 +1,4 @@
-package com.gmfiot.data;
+package com.gmfiot.data.test;
 
 import com.gmfiot.core.data.Query;
 
@@ -12,7 +12,6 @@ public class TUserQuery extends Query {
 //    private Integer take = 20;
 //    //排序
 //    private String orderBy = "id desc";
-//    private String groupBy = "";
 
     // where and 条件
     /**
@@ -83,6 +82,33 @@ public class TUserQuery extends Query {
     private Date orCreatedAtGreaterThan;
     // and createdAt < '2020-9-8'
     private Date orCreatedAtLessThan;
+
+    // 1.countAsOrderNumGroupBy = "userId,userName"
+    // -> select userId,userName,count(*) as OrderNum where datetimeAt > '2019-1-1' and datetimeAt < '2020' group by userId,userName
+    // 2.countAsOrderNumGroupBy = ""
+    // -> select count(*) as OrderNum where datetimeAt > '2019-1-1' and datetimeAt < '2020'
+    // count(*),sum(orderAmount),
+
+    //sum(列名),max(列名),min(列名),avg(列名),count(*),count(列名)
+    private String countStarAsOrderNumGroupBy;
+    // = "empid,YEAR(orderdate)"
+    private String sumAmountAsTotalOrders_maxAmountAsMaxAmountGroupBy;
+
+    private String countNameAsNameNumGroupBy;
+
+    private String maxNameAsMaxNameNumGroupBy;
+
+    private String minAgeAsMinAgeGroupBy;
+
+    private String sumSalaryAsTotalSalaryGroupBy;
+
+    private String avgSalaryAsAvgSalaryGroupBy = "salary";
+
+    private String having = "count(*) > 1";
+
+    private Class modelClass;
+
+    //private String having;
 
     public Long getId() {
         return id;
@@ -314,5 +340,77 @@ public class TUserQuery extends Query {
 
     public void setNames(String[] names) {
         this.names = names;
+    }
+
+    public String getCountStarAsOrderNumGroupBy() {
+        return countStarAsOrderNumGroupBy;
+    }
+
+    public void setCountStarAsOrderNumGroupBy(String countStarAsOrderNumGroupBy) {
+        this.countStarAsOrderNumGroupBy = countStarAsOrderNumGroupBy;
+    }
+
+    public String getSumAmountAsTotalOrders_maxAmountAsMaxAmountGroupBy() {
+        return sumAmountAsTotalOrders_maxAmountAsMaxAmountGroupBy;
+    }
+
+    public void setSumAmountAsTotalOrders_maxAmountAsMaxAmountGroupBy(String sumAmountAsTotalOrders_maxAmountAsMaxAmountGroupBy) {
+        this.sumAmountAsTotalOrders_maxAmountAsMaxAmountGroupBy = sumAmountAsTotalOrders_maxAmountAsMaxAmountGroupBy;
+    }
+
+    public String getHaving() {
+        return having;
+    }
+
+    public void setHaving(String having) {
+        this.having = having;
+    }
+
+    public String getCountNameAsNameNumGroupBy() {
+        return countNameAsNameNumGroupBy;
+    }
+
+    public void setCountNameAsNameNumGroupBy(String countNameAsNameNumGroupBy) {
+        this.countNameAsNameNumGroupBy = countNameAsNameNumGroupBy;
+    }
+
+    public String getMaxNameAsMaxNameNumGroupBy() {
+        return maxNameAsMaxNameNumGroupBy;
+    }
+
+    public void setMaxNameAsMaxNameNumGroupBy(String maxNameAsMaxNameNumGroupBy) {
+        this.maxNameAsMaxNameNumGroupBy = maxNameAsMaxNameNumGroupBy;
+    }
+
+    public String getMinAgeAsMinAgeGroupBy() {
+        return minAgeAsMinAgeGroupBy;
+    }
+
+    public void setMinAgeAsMinAgeGroupBy(String minAgeAsMinAgeGroupBy) {
+        this.minAgeAsMinAgeGroupBy = minAgeAsMinAgeGroupBy;
+    }
+
+    public String getSumSalaryAsTotalSalaryGroupBy() {
+        return sumSalaryAsTotalSalaryGroupBy;
+    }
+
+    public void setSumSalaryAsTotalSalaryGroupBy(String sumSalaryAsTotalSalaryGroupBy) {
+        this.sumSalaryAsTotalSalaryGroupBy = sumSalaryAsTotalSalaryGroupBy;
+    }
+
+    public String getAvgSalaryAsAvgSalaryGroupBy() {
+        return avgSalaryAsAvgSalaryGroupBy;
+    }
+
+    public void setAvgSalaryAsAvgSalaryGroupBy(String avgSalaryAsAvgSalaryGroupBy) {
+        this.avgSalaryAsAvgSalaryGroupBy = avgSalaryAsAvgSalaryGroupBy;
+    }
+
+    public Class getModelClass() {
+        return modelClass;
+    }
+
+    public void setModelClass(Class modelClass) {
+        this.modelClass = modelClass;
     }
 }

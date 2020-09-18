@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * 数据库访问接口
- * @author ThinkPad
+ * @author BaGuangHui
  */
 public interface BaseMapper<T extends BaseModel> {
 

@@ -1,64 +1,71 @@
 package com.gmfiot.data.sql;
-
 import com.gmfiot.core.BusinessException;
-import com.gmfiot.core.util.Inflector;
-import com.gmfiot.core.util.ReflectionUtil;
 import com.gmfiot.core.util.StringUtil;
-import com.gmfiot.data.annotation.Column;
-import com.gmfiot.data.annotation.Table;
-
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 /**
- * for mybatis
+ * @author BaGuangHui
  */
 public class SqlServerSqlBuilder implements SqlBuilder {
-
-    private final static ConcurrentMap<String, TableInfo> TABLE_MAP;
-    private final static ConcurrentMap<String, QueryInfo> QUERY_MAP;
 
     private StringBuilder sqlStringBuilder;
     private Class modelClass;
     private Object model;
     private Object query;
-    //springJdbc
-    private String usedFor = "mybatis";
-    //:%s
-    private String placeholdSign = "#{%s}";
-
-    static {
-        TABLE_MAP = new ConcurrentHashMap<>();
-        QUERY_MAP = new ConcurrentHashMap<>();
-    }
+    //?,:,#,nothing
+    private SqlPlaceholderEnum sqlPlaceholderEnum;
 
     public SqlServerSqlBuilder(){}
 
     public SqlServerSqlBuilder(Class modelClass, Object model, Object query){
+        this.modelClass = modelClass;
         this.model = model;
         this.query = query;
         this.sqlStringBuilder = new StringBuilder();
-        if(modelClass == null && query != null){
-            var queryInfo = getQueryInfo(query.getClass());
-            if(queryInfo.getModelClass() == null){
+        if(modelClass == null && model == null ){
+            if(query == null){
+                throw new BusinessException("initial parameters is invalid");
+            }
+            var queryInfo = SqlMappingData.getQueryInfo(query.getClass());
+            var getModelClass = queryInfo.getReadMethodMap().get("modelClass");
+            if(getModelClass == null){
                 throw new BusinessException("modelClass field is missing");
             }
-            this.modelClass = queryInfo.getModelClass();
-        } else {
-            this.modelClass = modelClass;
+            try {
+                var modelClassObj = getModelClass.invoke(query);
+                if(modelClassObj != null){
+                    this.modelClass = (Class) modelClassObj;
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            }
         }
+        this.sqlPlaceholderEnum = SqlPlaceholderEnum.QUESTION_MARK;
+    }
+
+    public SqlServerSqlBuilder(Class modelClass, Object model, Object query,SqlPlaceholderEnum sqlPlaceholderEnum){
+        this(modelClass,model,query);
+        this.sqlPlaceholderEnum = sqlPlaceholderEnum;
+    }
+
+    @Override
+    public SqlBuilder setSqlPlaceholder(SqlPlaceholderEnum sqlPlaceholderEnum) {
+        this.sqlPlaceholderEnum = sqlPlaceholderEnum;
+        return this;
+    }
+
+    @Override
+    public SqlPlaceholderEnum getSqlPlaceholder() {
+        return this.sqlPlaceholderEnum;
     }
 
     @Override
     public SqlBuilder build(SqlTypeEnum sqlTypeEnum) {
-
         switch (sqlTypeEnum){
             case INSERT:
                 buildInsert();
@@ -72,11 +79,17 @@ public class SqlServerSqlBuilder implements SqlBuilder {
             case SELECT:
                 buildSelect();
                 break;
+            case COUNT:
+                buildCount();
+                break;
             case WHERE:
                 buildWhere();
                 break;
-            case ORDERBY:
+            case ORDER_BY:
                 buildOrderBy();
+                break;
+            case DISTINCT:
+                buildDistinct();
                 break;
             case TOP:
                 buildTop();
@@ -84,7 +97,7 @@ public class SqlServerSqlBuilder implements SqlBuilder {
             case OFFSET_FETCH:
                 buildOffsetFetch();
                 break;
-            case GROUPBY:
+            case GROUP_BY:
                 buildGroupBy();
                 break;
             case HAVING:
@@ -126,184 +139,31 @@ public class SqlServerSqlBuilder implements SqlBuilder {
         return sqlStringBuilder.toString();
     }
 
-    /**
-     * 根据数据模型类型获取表信息
-     * @param modelClass
-     * @return
-     */
-    private TableInfo getTableInfo(Class<?> modelClass){
-        var tableInfo = TABLE_MAP.get(modelClass.getName());
-        if(tableInfo == null){
-            var typeName = modelClass.getName();
-            tableInfo = new TableInfo();
-            TABLE_MAP.putIfAbsent(typeName,tableInfo);
-            var tableAnnotation = modelClass.getAnnotation(Table.class);
-            if(tableAnnotation != null){
-                tableInfo.setName(tableAnnotation.name());
-                tableInfo.setSchema(tableAnnotation.schema());
-            }else {
-                var tableName = Inflector.getInstance().pluralize(modelClass.getSimpleName());
-                tableInfo.setName(tableName);
-            }
-            var fieldList = ReflectionUtil.getAllFields(modelClass);
-            //tableInfo.setColumns(fieldList);
-            var fieldColumnMap = new HashMap<String,ColumnInfo>();
-            //var getMethodMap = new HashMap<String, Method>();
-            fieldList.stream().forEach(fieldName -> {
-                try {
-                    var columnInfo = new ColumnInfo();
-                    var field = ReflectionUtil.getField(modelClass,fieldName);
-                    var fieldAnnotation = field.getAnnotation(Column.class);
-                    if(fieldAnnotation == null){
-                        columnInfo.setName(fieldName);
-                    }else {
-                        columnInfo.setName(fieldAnnotation.name());
-                        columnInfo.setNullable(fieldAnnotation.nullable());
-                    }
-                    var getMethod = modelClass.getMethod("get" + StringUtil.toUpperCaseFirstLetter(fieldName));
-                    columnInfo.setGetMethod(getMethod);
-                    fieldColumnMap.putIfAbsent(fieldName,columnInfo);
-                } catch (NoSuchMethodException e) {
-                    e.printStackTrace();
-                }
-            });
-            tableInfo.setFieldColumnMap(fieldColumnMap);
-        }
-        return tableInfo;
-    }
-
-    /**
-     * 获取非空字段名
-     * @param model
-     * @return
-     */
-    private List<String> getNotNullFields(Object model) {
-        List<String> notNullFieldList = new ArrayList<>();
-        var modelClass = model.getClass();
-        var tableInfo = TABLE_MAP.get(modelClass.getName());
-        try {
-            var entrySet = tableInfo.getFieldColumnMap().entrySet();
-            for(var entry : entrySet){
-                var retValue = entry.getValue().getValue(model);
-                if(retValue != null){
-                    notNullFieldList.add(entry.getKey());
-                }
-            }
-//            for (var fieldName : tableInfo.getFieldColumnMap().keySet())
-//            {
-//                var getMethod = tableInfo.getGetMethodMap().get(fieldName);
-//                var retValue = getMethod.invoke(model);
-//                if(retValue != null){
-//                    notNullFieldList.add(fieldName);
-//                }
-//            }
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-        return notNullFieldList;
-    }
-
-//    private List<String> getNotNullColumns(Object model) {
-//        List<String> notNullColumnList = new ArrayList<>();
-//        var modelClass = model.getClass();
-//        var tableInfo = TABLE_MAP.get(modelClass.getName());
-//        try {
-//            var entrySet = tableInfo.getFieldColumnMap().entrySet();
-//            for(var entry : entrySet){
-//                var retValue = entry.getValue().getValue(model);
-//                if(retValue != null){
-//                    notNullColumnList.add(entry.getValue().getName());
-//                }
-//            }
-//        } catch (Exception e){
-//            e.printStackTrace();
-//        }
-//        return notNullColumnList;
-//    }
-
-    private QueryInfo getQueryInfo(Class<?> queryClass){
-        var queryInfo = QUERY_MAP.get(queryClass.getName());
-        if(queryInfo == null){
-            var typeName = queryClass.getName();
-            var fieldList = ReflectionUtil.getAllFields(queryClass);
-            queryInfo = new QueryInfo();
-            queryInfo.setTypeName(typeName);
-            queryInfo.setFields(fieldList);
-
-            var getMethodMap = new HashMap<String, Method>();
-            var conditionNameMap = new HashMap<String,String>();
-
-            fieldList.stream().forEach(fieldName -> {
-                try {
-                    var conditionName = "";
-                    if(fieldName.startsWith("or")){
-                        conditionName = StringUtil.toLowerCaseFirstLetter(fieldName.replace("or",""));
-                    } else if(fieldName.startsWith("and")){
-                        conditionName = StringUtil.toLowerCaseFirstLetter(fieldName.replace("and",""));
-                    }
-                    conditionNameMap.putIfAbsent(fieldName,conditionName);
-
-                    var getMethod = queryClass.getMethod("get" + StringUtil.toUpperCaseFirstLetter(fieldName));
-                    getMethodMap.put(fieldName,getMethod);
-                } catch (NoSuchMethodException e) {
-                    e.printStackTrace();
-                }
-            });
-
-            if(modelClass == null){
-                var getModelClassMothod = getMethodMap.get("modelClass");
-                if(getModelClassMothod != null){
-                    try{
-                        var retValue = getModelClassMothod.invoke(query);
-                        if(retValue != null){
-                            queryInfo.setModelClass((Class)retValue);
-                        }
-                    }catch (Exception ex){
-                        ex.printStackTrace();
-                    }
-                }
-            }else {
-                queryInfo.setModelClass(modelClass);
-            }
-
-            queryInfo.setGetMethodMap(getMethodMap);
-            queryInfo.setConditionNameMap(conditionNameMap);
-            QUERY_MAP.putIfAbsent(typeName,queryInfo);
-        }
-        return queryInfo;
-    }
-
-    public Map<String,Object> getNotNullQueryFieldMap(Object object) {
-        Map<String,Object> propertyMap = new HashMap<>();
-        var queryInfo = getQueryInfo(object.getClass());
-        try {
-            for (var fieldName : queryInfo.getFields())
-            {
-                var getMethod = queryInfo.getGetMethodMap().get(fieldName);
-                var retValue = getMethod.invoke(object);
-                if(retValue != null){
-                    propertyMap.putIfAbsent(fieldName,retValue);
-                }
-            }
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-        return propertyMap;
-    }
-
     /**************************构建Sql语句******************************/
+
+    private String getSqlPlaceholderSign(String filedName){
+        if(sqlPlaceholderEnum == SqlPlaceholderEnum.QUESTION_MARK){
+            return "?";
+        } else if(sqlPlaceholderEnum == SqlPlaceholderEnum.COLON){
+            return String.format(":%s",filedName);
+        } else if(sqlPlaceholderEnum == SqlPlaceholderEnum.HASH_SIGN){
+            return String.format("#{%s}",filedName);
+        }
+        return null;
+    }
+
     /**
      * 构建insert 语句
      */
     private void buildInsert(){
-        var tableInfo = getTableInfo(modelClass);
+        var tableInfo = SqlMappingData.getTableInfo(modelClass);
         sqlStringBuilder.append(String.format("INSERT INTO %s(",tableInfo.getName()));
-        var fieldList = getNotNullFields(model);
+        var fieldList = SqlMappingData.getNotNullFields(model);
         var columnList = fieldList.stream().map(field -> tableInfo.getFieldColumnMap().get(field).getName()).collect(toList());
         var columnStr = String.join(",",columnList);
         sqlStringBuilder.append(columnStr);
         sqlStringBuilder.append(") VALUES (");
-        var valueStr = fieldList.stream().map(field -> String.format("#{%s}",field)).collect(joining(","));
+        String valueStr = fieldList.stream().map(field -> getSqlPlaceholderSign(field)).collect(joining(","));;
         sqlStringBuilder.append(valueStr);
         sqlStringBuilder.append(")");
     }
@@ -312,11 +172,11 @@ public class SqlServerSqlBuilder implements SqlBuilder {
      * 构建Delete 语句
      */
     private void buildDelete(){
-        var tableInfo = getTableInfo(modelClass);
-        var sql = String.format("DELETE %s WHERE Id = #{id}",tableInfo.getName());
+        var tableInfo = SqlMappingData.getTableInfo(modelClass);
         sqlStringBuilder.append("DELETE " + tableInfo.getName());
         if(query == null){
-            sqlStringBuilder.append(" WHERE id = #{id}");
+            sqlStringBuilder.append(" WHERE id = ");
+            sqlStringBuilder.append(getSqlPlaceholderSign("id"));
         }
     }
 
@@ -324,25 +184,27 @@ public class SqlServerSqlBuilder implements SqlBuilder {
      * 构建Update 语句
      */
     private void buildUpdate(){
-        var tableInfo = getTableInfo(modelClass);
+        var tableInfo = SqlMappingData.getTableInfo(modelClass);
         sqlStringBuilder.append(String.format("UPDATE %s SET ",tableInfo.getName()));
-        var valueStr = getNotNullFields(model).stream().filter(p-> p != "id")
+        var valueStr = SqlMappingData.getNotNullFields(model).stream().filter(p-> p != "id")
                 .map(field -> {
                     var columnName = tableInfo.getFieldColumnMap().get(field).getName();
-                    return String.format("%s = #{%s}",columnName,field);
+                    return String.format("%s = %s",columnName, getSqlPlaceholderSign(field));
+                    //return String.format("%s = #{%s}",columnName,field);
                 })
                 .collect(joining(","));
         sqlStringBuilder.append(valueStr);
         if(query == null){
-            sqlStringBuilder.append(" WHERE id = #{id}");
+            sqlStringBuilder.append(" WHERE id = ");
+            sqlStringBuilder.append(getSqlPlaceholderSign("id"));
         }
     }
 
     /**
-     * 构建Update 语句
+     * 构建Select 语句
      */
     private void buildSelect(){
-        var tableInfo = getTableInfo(modelClass);
+        var tableInfo = SqlMappingData.getTableInfo(modelClass);
         var columnList = tableInfo.getFieldColumnMap().values()
                 .stream()
                 .map(columnInfo -> columnInfo.getName())
@@ -350,13 +212,22 @@ public class SqlServerSqlBuilder implements SqlBuilder {
         var columnStr = String.join(",",columnList);
         sqlStringBuilder.append(String.format("SELECT %s FROM %s ",columnStr,tableInfo.getName()));
         if(query == null){
-            sqlStringBuilder.append("WHERE Id = #{id}");
+            sqlStringBuilder.append("WHERE Id = ");
+            sqlStringBuilder.append(getSqlPlaceholderSign("id"));
         }
     }
 
-    private final static List<String> PAGED_FIELDS = List.of("skip","take","orderBy","modelClass");
-    private final static String OR_SIGN = SqlConditionTypeEnum.OR.getName();
-    private final static String AND_SIGN = SqlConditionTypeEnum.AND.getName();
+    /**
+     * 构建buildCount 语句
+     */
+    private void buildCount(){
+        var tableInfo = SqlMappingData.getTableInfo(modelClass);
+        sqlStringBuilder.append(String.format("SELECT COUNT(*) FROM %s ",tableInfo.getName()));
+    }
+
+    private final static List<String> PAGED_FIELDS = List.of("skip","take","orderBy","modelClass","groupBy","having");
+//    private final static String OR_SIGN = SqlConditionTypeEnum.OR.getName();
+//    private final static String AND_SIGN = SqlConditionTypeEnum.AND.getName();
 
     /**************************构建Sql子句******************************/
     /**
@@ -364,16 +235,15 @@ public class SqlServerSqlBuilder implements SqlBuilder {
      * 构建Where子句
      */
     private void buildWhere(){
-        TableInfo tableInfo = getTableInfo(modelClass);
-        var queryMap = getNotNullQueryFieldMap(query);
+        TableInfo tableInfo = SqlMappingData.getTableInfo(modelClass);
+        var queryMap = SqlMappingData.getNotNullQueryFieldMap(query);
 
-        //List<String> conditionSigns = List.of("Is NULL","LIKE","NOT LIKE","NOT IN","LIKE","EndsWith","From","To","GreaterThan","LessThan","NotEquals","Equals","In");
         var andFields = queryMap.keySet().stream()
                 .filter(p -> !PAGED_FIELDS.contains(p))
                 .filter(p -> !p.startsWith("or"))
+                //.filter(p -> !p.endsWith("GroupBy"))
                 .collect(toList());
         var orFields = queryMap.keySet().stream()
-                .filter(p -> !PAGED_FIELDS.contains(p))
                 .filter(p -> p.startsWith("or"))
                 .collect(toList());
 
@@ -407,54 +277,59 @@ public class SqlServerSqlBuilder implements SqlBuilder {
                     .filter(p -> andField.contains(p))
                     .findFirst()
                     .orElse(null);
-            var columnName = tableInfo.getFieldColumnMap().get(fieldName).getName();
-            if( columnName != null){
-                var filedValue = queryMap.get(andField);
-                if (filedValue.getClass().isArray() && andField.endsWith("s")){
-                    var valueArray = (Object[])filedValue;
-                    var inSeq = "";
-                    if(filedValue instanceof String[]){
-                        inSeq = Arrays.stream(valueArray).map(p -> String.format("\'%s\'",p)).collect(joining(","));
-                    } else if(filedValue instanceof Object[]){
-                        inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
-                    }
-                    sqlStringBuilder.append(String.format("%s in (%s) AND ",columnName,inSeq));
-                } else if(andField.endsWith("NotEquals")) {
-                    sqlStringBuilder.append(String.format("%s != #{%s} AND ",columnName,andField));
-                } else if(andField.equals(fieldName) || andField.endsWith("Equals")){
-                    sqlStringBuilder.append(String.format("%s = #{%s} AND ",columnName,andField));
-                } else if(andField.endsWith("NotContains")) {
-                    sqlStringBuilder.append(String.format("%s NOT LIKE CONCAT('%%',#{%s},'%%') AND ",columnName,andField));
+            if(fieldName == null){
+                continue;
+            }
+            var columnInfo =  tableInfo.getFieldColumnMap().get(fieldName);
+            if(columnInfo == null){
+                continue;
+            }
+            var columnName = columnInfo.getName();
+            var filedValue = queryMap.get(andField);
+            if (filedValue.getClass().isArray() && andField.endsWith("s")){
+                var valueArray = (Object[])filedValue;
+                var inSeq = "";
+                if(filedValue instanceof String[]){
+                    inSeq = Arrays.stream(valueArray).map(p -> String.format("\'%s\'",p)).collect(joining(","));
+                } else if(filedValue instanceof Object[]){
+                    inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
                 }
-                else if(andField.endsWith("Contains")){
-                    sqlStringBuilder.append(String.format("%s LIKE CONCAT('%%',#{%s},'%%') AND ",columnName,andField));
-                } else if(andField.endsWith("NotIn")) {
-                    var valueArray = (Object[])filedValue;
-                    var inSeq = "";
-                    if(filedValue instanceof String[]){
-                        inSeq = Arrays.stream(valueArray).map(p -> String.format("'%s'",p)).collect(joining(","));
-                    } else if(filedValue instanceof Object[]){
-                        inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
-                    }
-                    sqlStringBuilder.append(String.format("%s NOT IN (%s) AND ",columnName,inSeq));
-                } else if(andField.endsWith("StartsWith")){
-                    sqlStringBuilder.append(String.format("%s LIKE CONCAT(#{%s},'%%') AND ",columnName,andField));
-                } else if(andField.endsWith("EndsWith")){
-                    sqlStringBuilder.append(String.format("%s LIKE CONCAT('%%',#{%s}) AND ",columnName,andField));
-                } else if(andField.endsWith("From")){
-                    sqlStringBuilder.append(String.format("%s >= #{%s} AND ",columnName,andField));
-                }else if(andField.endsWith("To")){
-                    sqlStringBuilder.append(String.format("%s <= #{%s} AND ",columnName,andField));
-                } else if(andField.endsWith("GreaterThan")){
-                    sqlStringBuilder.append(String.format("%s > #{%s} AND ",columnName,andField));
-                } else if(andField.endsWith("LessThan")){
-                    sqlStringBuilder.append(String.format("%s < #{%s} AND ",columnName,andField));
-                } else if(andField.endsWith("IsNull") && filedValue instanceof Boolean){
-                    if ((Boolean)filedValue){
-                        sqlStringBuilder.append(String.format("%s IS NULL AND ",columnName));
-                    }else {
-                        sqlStringBuilder.append(String.format("%s IS NOT NULL AND ",columnName));
-                    }
+                sqlStringBuilder.append(String.format("%s in (%s) AND ",columnName,inSeq));
+            } else if(andField.endsWith("NotEquals")) {
+                sqlStringBuilder.append(String.format("%s != %s AND ",columnName, getSqlPlaceholderSign(andField)));
+            } else if(andField.equals(fieldName) || andField.endsWith("Equals")){
+                sqlStringBuilder.append(String.format("%s = %s AND ",columnName, getSqlPlaceholderSign(andField)));
+            } else if(andField.endsWith("NotContains")) {
+                sqlStringBuilder.append(String.format("%s NOT LIKE CONCAT('%%',%,'%%') AND ",columnName,getSqlPlaceholderSign(andField)));
+            }
+            else if(andField.endsWith("Contains")){
+                sqlStringBuilder.append(String.format("%s LIKE CONCAT('%%',%s,'%%') AND ",columnName,getSqlPlaceholderSign(andField)));
+            } else if(andField.endsWith("NotIn")) {
+                var valueArray = (Object[])filedValue;
+                var inSeq = "";
+                if(filedValue instanceof String[]){
+                    inSeq = Arrays.stream(valueArray).map(p -> String.format("'%s'",p)).collect(joining(","));
+                } else if(filedValue instanceof Object[]){
+                    inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
+                }
+                sqlStringBuilder.append(String.format("%s NOT IN (%s) AND ",columnName,inSeq));
+            } else if(andField.endsWith("StartsWith")){
+                sqlStringBuilder.append(String.format("%s LIKE CONCAT(%s,'%%') AND ",columnName,getSqlPlaceholderSign(andField)));
+            } else if(andField.endsWith("EndsWith")){
+                sqlStringBuilder.append(String.format("%s LIKE CONCAT('%%',%s) AND ",columnName,getSqlPlaceholderSign(andField)));
+            } else if(andField.endsWith("From")){
+                sqlStringBuilder.append(String.format("%s >= %s AND ",columnName,getSqlPlaceholderSign(andField)));
+            }else if(andField.endsWith("To")){
+                sqlStringBuilder.append(String.format("%s <= %s AND ",columnName,getSqlPlaceholderSign(andField)));
+            } else if(andField.endsWith("GreaterThan")){
+                sqlStringBuilder.append(String.format("%s > %s AND ",columnName,getSqlPlaceholderSign(andField)));
+            } else if(andField.endsWith("LessThan")){
+                sqlStringBuilder.append(String.format("%s < %s AND ",columnName,getSqlPlaceholderSign(andField)));
+            } else if(andField.endsWith("IsNull") && filedValue instanceof Boolean){
+                if ((Boolean)filedValue){
+                    sqlStringBuilder.append(String.format("%s IS NULL AND ",columnName));
+                }else {
+                    sqlStringBuilder.append(String.format("%s IS NOT NULL AND ",columnName));
                 }
             }
         }
@@ -462,7 +337,7 @@ public class SqlServerSqlBuilder implements SqlBuilder {
     }
 
     private void buildWhereOrCondition(TableInfo tableInfo,Map<String,Object> queryMap,List<String> orFields){
-        var queryInfo = getQueryInfo(query.getClass());
+        var queryInfo = SqlMappingData.getQueryInfo(query.getClass());
         for (var orField: orFields){
             var conditionName = queryInfo.getConditionNameMap().get(orField);
             var fieldName = tableInfo.getFieldColumnMap()
@@ -471,55 +346,61 @@ public class SqlServerSqlBuilder implements SqlBuilder {
                     .filter(p -> conditionName.contains(p))
                     .findFirst()
                     .orElse(null);
-            var columnName = tableInfo.getFieldColumnMap().get(fieldName).getName();
 
-            if( columnName != null){
-                var filedValue = queryMap.get(orField);
-                if (filedValue.getClass().isArray() && orField.endsWith("s")){
-                    var valueArray = (Object[])filedValue;
-                    var inSeq = "";
-                    if(filedValue instanceof String[]){
-                        inSeq = Arrays.stream(valueArray).map(p -> String.format("\'%s\'",p)).collect(joining(","));
-                    } else if(filedValue instanceof Object[]){
-                        inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
-                    }
-                    sqlStringBuilder.append(String.format("%s in (%s) OR ",columnName,inSeq));
-                } else if(orField.endsWith("NotEquals")) {
-                    sqlStringBuilder.append(String.format("%s != #{%s} OR ",columnName,orField));
-                } else if(conditionName.equals(fieldName) || orField.endsWith("Equals")){
-                    sqlStringBuilder.append(String.format("%s = #{%s} OR ",columnName,orField));
-                } else if(orField.endsWith("NotContains")) {
-                    sqlStringBuilder.append(String.format("%s NOT LIKE CONCAT('%%',#{%s},'%%') OR ",columnName,orField));
+            if(fieldName == null){
+                continue;
+            }
+            var columnInfo =  tableInfo.getFieldColumnMap().get(fieldName);
+            if(columnInfo == null){
+                continue;
+            }
+            var columnName = columnInfo.getName();
+
+            var filedValue = queryMap.get(orField);
+            if (filedValue.getClass().isArray() && orField.endsWith("s")){
+                var valueArray = (Object[])filedValue;
+                var inSeq = "";
+                if(filedValue instanceof String[]){
+                    inSeq = Arrays.stream(valueArray).map(p -> String.format("\'%s\'",p)).collect(joining(","));
+                } else if(filedValue instanceof Object[]){
+                    inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
                 }
-                else if(orField.endsWith("Contains")){
-                    sqlStringBuilder.append(String.format("%s LIKE CONCAT('%%',#{%s},'%%') OR ",columnName,orField));
-                } else if(orField.endsWith("NotIn")) {
-                    var valueArray = (Object[])filedValue;
-                    var inSeq = "";
-                    if(filedValue instanceof String[]){
-                        inSeq = Arrays.stream(valueArray).map(p -> String.format("'%s'",p)).collect(joining(","));
-                    } else if(filedValue instanceof Object[]){
-                        inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
-                    }
-                    sqlStringBuilder.append(String.format("%s NOT IN (%s) OR ",columnName,inSeq));
-                } else if(orField.endsWith("StartsWith")){
-                    sqlStringBuilder.append(String.format("%s LIKE CONCAT(#{%s},'%%') OR ",columnName,orField));
-                } else if(orField.endsWith("EndsWith")){
-                    sqlStringBuilder.append(String.format("%s LIKE CONCAT('%%',#{%s}) OR ",columnName,orField));
-                } else if(orField.endsWith("From")){
-                    sqlStringBuilder.append(String.format("%s >= #{%s} OR ",columnName,orField));
-                }else if(orField.endsWith("To")){
-                    sqlStringBuilder.append(String.format("%s <= #{%s} OR ",columnName,orField));
-                } else if(orField.endsWith("GreaterThan")){
-                    sqlStringBuilder.append(String.format("%s > #{%s} OR ",columnName,orField));
-                } else if(orField.endsWith("LessThan")){
-                    sqlStringBuilder.append(String.format("%s < #{%s} OR ",columnName,orField));
-                } else if(orField.endsWith("IsNull") && filedValue instanceof Boolean){
-                    if ((Boolean)filedValue){
-                        sqlStringBuilder.append(String.format("%s IS NULL OR ",columnName));
-                    }else {
-                        sqlStringBuilder.append(String.format("%s IS NOT NULL OR ",columnName));
-                    }
+                sqlStringBuilder.append(String.format("%s in (%s) OR ",columnName,inSeq));
+            } else if(orField.endsWith("NotEquals")) {
+                sqlStringBuilder.append(String.format("%s != %s OR ",columnName,getSqlPlaceholderSign(orField)));
+            } else if(conditionName.equals(fieldName) || orField.endsWith("Equals")){
+                sqlStringBuilder.append(String.format("%s = %s OR ",columnName,getSqlPlaceholderSign(orField)));
+            } else if(orField.endsWith("NotContains")) {
+                sqlStringBuilder.append(String.format("%s NOT LIKE CONCAT('%%',%s,'%%') OR ",columnName,getSqlPlaceholderSign(orField)));
+            }
+            else if(orField.endsWith("Contains")){
+                sqlStringBuilder.append(String.format("%s LIKE CONCAT('%%',%s,'%%') OR ",columnName,getSqlPlaceholderSign(orField)));
+            } else if(orField.endsWith("NotIn")) {
+                var valueArray = (Object[])filedValue;
+                var inSeq = "";
+                if(filedValue instanceof String[]){
+                    inSeq = Arrays.stream(valueArray).map(p -> String.format("'%s'",p)).collect(joining(","));
+                } else if(filedValue instanceof Object[]){
+                    inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
+                }
+                sqlStringBuilder.append(String.format("%s NOT IN (%s) OR ",columnName,inSeq));
+            } else if(orField.endsWith("StartsWith")){
+                sqlStringBuilder.append(String.format("%s LIKE CONCAT(%s,'%%') OR ",columnName,getSqlPlaceholderSign(orField)));
+            } else if(orField.endsWith("EndsWith")){
+                sqlStringBuilder.append(String.format("%s LIKE CONCAT('%%',%s) OR ",columnName,getSqlPlaceholderSign(orField)));
+            } else if(orField.endsWith("From")){
+                sqlStringBuilder.append(String.format("%s >= %s OR ",columnName,getSqlPlaceholderSign(orField)));
+            }else if(orField.endsWith("To")){
+                sqlStringBuilder.append(String.format("%s <= %s OR ",columnName,getSqlPlaceholderSign(orField)));
+            } else if(orField.endsWith("GreaterThan")){
+                sqlStringBuilder.append(String.format("%s > %s OR ",columnName,getSqlPlaceholderSign(orField)));
+            } else if(orField.endsWith("LessThan")){
+                sqlStringBuilder.append(String.format("%s < %s OR ",columnName,getSqlPlaceholderSign(orField)));
+            } else if(orField.endsWith("IsNull") && filedValue instanceof Boolean){
+                if ((Boolean)filedValue){
+                    sqlStringBuilder.append(String.format("%s IS NULL OR ",columnName));
+                }else {
+                    sqlStringBuilder.append(String.format("%s IS NOT NULL OR ",columnName));
                 }
             }
         }
@@ -530,14 +411,14 @@ public class SqlServerSqlBuilder implements SqlBuilder {
      * 构建OrderBy子句
      */
     private void buildOrderBy(){
-        var queryInfo = getQueryInfo(query.getClass());
-        var oderByField = queryInfo.getGetMethodMap().keySet().stream()
+        var queryInfo = SqlMappingData.getQueryInfo(query.getClass());
+        var oderByField = queryInfo.getReadMethodMap().keySet().stream()
                 .filter(p -> p.equals("orderBy"))
                 .findFirst().orElse(null);
 
         if(oderByField != null){
             try {
-                var fieldValue = queryInfo.getGetMethodMap().get(oderByField).invoke(query);
+                var fieldValue = queryInfo.getReadMethodMap().get(oderByField).invoke(query);
                 if(fieldValue != null){
                     sqlStringBuilder.append(" ORDER BY " + fieldValue);
                 }
@@ -550,24 +431,39 @@ public class SqlServerSqlBuilder implements SqlBuilder {
     }
 
     /**
+     * 构建Distinct子句
+     */
+    private void buildDistinct(){
+        int selectIndex = sqlStringBuilder.indexOf("SELECT");
+        if(selectIndex >= 0){
+            sqlStringBuilder.insert(selectIndex + 6," DISTINCT");
+        } else {
+            throw new BusinessException("The SELECT statement has not yet been built");
+        }
+    }
+
+    /**
      * 构建Top子句
      */
     private void buildTop(){
-        var queryInfo = getQueryInfo(query.getClass());
-        var takeField = queryInfo.getGetMethodMap().keySet().stream()
+        int selectIndex = sqlStringBuilder.indexOf("SELECT");
+        if(selectIndex < 0){
+            throw new BusinessException("The SELECT statement has not yet been built");
+        }
+
+        var queryInfo = SqlMappingData.getQueryInfo(query.getClass());
+        var takeField = queryInfo.getReadMethodMap().keySet().stream()
                 .filter(p -> p.equals("take"))
                 .findFirst().orElse(null);
 
         if(takeField != null){
             try {
-                var fieldValue = queryInfo.getGetMethodMap().get(takeField).invoke(query);
+                var fieldValue = queryInfo.getReadMethodMap().get(takeField).invoke(query);
                 if(fieldValue != null){
                     var topSql = String.format(" TOP(%s)",fieldValue);
-                    sqlStringBuilder.insert(sqlStringBuilder.indexOf("SELECT") + 6,topSql);
+                    sqlStringBuilder.insert(selectIndex + 6,topSql);
                 }
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -577,20 +473,20 @@ public class SqlServerSqlBuilder implements SqlBuilder {
      * 构建OffsetFetch子句
      */
     private void buildOffsetFetch(){
-        var queryInfo = getQueryInfo(query.getClass());
-        var orderByField = queryInfo.getGetMethodMap().keySet().stream()
+        var queryInfo = SqlMappingData.getQueryInfo(query.getClass());
+        var orderByField = queryInfo.getReadMethodMap().keySet().stream()
                 .filter(p -> p.equals("orderBy"))
                 .findFirst().orElse(null);
-        var takeField = queryInfo.getGetMethodMap().keySet().stream()
+        var takeField = queryInfo.getReadMethodMap().keySet().stream()
                 .filter(p -> p.equals("take"))
                 .findFirst().orElse(null);
-        var skipField = queryInfo.getGetMethodMap().keySet().stream()
+        var skipField = queryInfo.getReadMethodMap().keySet().stream()
                 .filter(p -> p.equals("skip"))
                 .findFirst().orElse(null);
         try {
-            var orderByFieldValue = queryInfo.getGetMethodMap().get(orderByField).invoke(query);
-            var takeFieldValue = queryInfo.getGetMethodMap().get(takeField).invoke(query);
-            var skipFieldValue = queryInfo.getGetMethodMap().get(skipField).invoke(query);
+            var orderByFieldValue = queryInfo.getReadMethodMap().get(orderByField).invoke(query);
+            var takeFieldValue = queryInfo.getReadMethodMap().get(takeField).invoke(query);
+            var skipFieldValue = queryInfo.getReadMethodMap().get(skipField).invoke(query);
 
             if(sqlStringBuilder.indexOf("ORDER BY") < 0){
                 if (orderByFieldValue != null){
@@ -615,13 +511,85 @@ public class SqlServerSqlBuilder implements SqlBuilder {
      * 构建GroupBy子句
      */
     private void buildGroupBy(){
-        sqlStringBuilder.append("Group By");
+        var queryInfo = SqlMappingData.getQueryInfo(query.getClass());
+        var groupByFields = queryInfo.getReadMethodMap().keySet().stream()
+                .filter(p -> p.equals("groupBy") || p.endsWith("GroupBy"))
+                .collect(toList());
+
+        for (var groupByField : groupByFields){
+            try {
+                var fieldValue = (String)queryInfo.getReadMethodMap().get(groupByField).invoke(query);
+                if(fieldValue == null)
+                {
+                    continue;
+                }
+                int selectIndex = sqlStringBuilder.indexOf("SELECT");
+                if(selectIndex < 0){
+                    throw new BusinessException("The SELECT statement has not yet been built");
+                }
+                var aggregateFunctions = List.of("count","sum","max","min","avg");
+                var rawGroupByFields = groupByField.replaceAll("GroupBy","").split("_");
+                if(rawGroupByFields == null){
+
+                    int fromIndex = sqlStringBuilder.indexOf("FROM");
+                    sqlStringBuilder.replace(selectIndex + 7,fromIndex,fieldValue);
+                    sqlStringBuilder.append(" GROUP BY " + fieldValue);
+                    return;
+                }
+                StringBuilder selectedFields = new StringBuilder();
+                selectedFields.append(fieldValue);
+                if(!StringUtil.isBlank(fieldValue)){
+                    selectedFields.append(",");
+                }
+                for(var rawGroupByField : rawGroupByFields){
+                    var aggregateFunctionName = aggregateFunctions.stream().filter(p -> rawGroupByField.startsWith(p)).findFirst().orElse(null);
+                    if(aggregateFunctionName == null){
+                        return;
+                    }
+                    var filedNameForAggregation = rawGroupByField.substring(aggregateFunctionName.length(),rawGroupByField.indexOf("As"));
+                    if(filedNameForAggregation.equals("Star")){
+                        filedNameForAggregation = "*";
+                    }
+                    var fieldAliasName = rawGroupByField.substring(rawGroupByField.indexOf("As") + 2);
+                    selectedFields.append(aggregateFunctionName.toUpperCase());
+                    selectedFields.append("(");
+                    selectedFields.append(filedNameForAggregation);
+                    selectedFields.append(") As ");
+                    selectedFields.append(fieldAliasName);
+                    selectedFields.append(" ,");
+                }
+                selectedFields.deleteCharAt(selectedFields.length() - 1);
+                int fromIndex = sqlStringBuilder.indexOf("FROM");
+                sqlStringBuilder.replace(selectIndex + 7,fromIndex,selectedFields.toString());
+                if(!StringUtil.isBlank(fieldValue)){
+                    sqlStringBuilder.append(" GROUP BY " + fieldValue);
+                }
+                break;
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
      * 构建Having子句
      */
     private void buildHaving(){
-        sqlStringBuilder.append("Having ");
+        var queryInfo = SqlMappingData.getQueryInfo(query.getClass());
+        var havingField = queryInfo.getReadMethodMap().keySet().stream()
+                .filter(p -> p.equals("having"))
+                .findFirst().orElse(null);
+
+        if(havingField != null){
+            try {
+                var fieldValue = queryInfo.getReadMethodMap().get(havingField).invoke(query);
+                if(fieldValue != null){
+                    sqlStringBuilder.append(" HAVING " + fieldValue);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

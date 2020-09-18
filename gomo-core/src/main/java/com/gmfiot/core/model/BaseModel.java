@@ -1,11 +1,12 @@
 package com.gmfiot.core.model;
 
+import java.io.Serializable;
 import java.util.Date;
 
 /**
- * @author ThinkPad
+ * @author BaGuangHui
  */
-public abstract class BaseModel {
+public abstract class BaseModel implements Serializable {
     private Long id;
 
     private Date createdAt;

@@ -1,10 +1,24 @@
 package com.gmfiot.core.util;
 
+/**
+ * @author BaGuangHui
+ */
 public class StringUtil {
+
+    /**
+     * 判断字符串是空
+     * @param str
+     * @return
+     */
     public static boolean isEmpty(String str){
         return str == null || str.isEmpty();
     }
 
+    /**
+     * 判断字符串是否为空或空格字符
+     * @param str
+     * @return
+     */
     public static boolean isBlank(String str){
         return str == null || str.isBlank();
     }
@@ -14,7 +28,7 @@ public class StringUtil {
      * @param str
      * @return
      */
-    public static String toUpperCaseFirstLetter(String str){
+    public static String capitalize(String str){
         char[] cs=str.toCharArray();
         cs[0]-=32;
         return String.valueOf(cs);
@@ -25,7 +39,7 @@ public class StringUtil {
      * @param str
      * @return
      */
-    public static String toLowerCaseFirstLetter(String str){
+    public static String decapitalize(String str){
         char[] cs=str.toCharArray();
         cs[0]+=32;
         return String.valueOf(cs);

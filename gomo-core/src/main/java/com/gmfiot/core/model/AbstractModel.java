@@ -3,7 +3,7 @@ package com.gmfiot.core.model;
 import java.util.Date;
 
 /**
- * @author ThinkPad
+ * @author BaGuangHui
  */
 public abstract class AbstractModel extends BaseModel {
     private Date lastModifiedAt;

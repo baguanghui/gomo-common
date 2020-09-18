@@ -1,7 +1,7 @@
 package com.gmfiot.core;
 
 /**
- * @author ThinkPad
+ * @author BaGuangHui
  */
 public enum StatusCodeEnum {
     /**
@@ -17,18 +17,18 @@ public enum StatusCodeEnum {
     UNKNOW_ERROR(16000,"未知错误");
 
     private int code;
-    private String msg;
+    private String message;
 
-    StatusCodeEnum(int code, String msg){
+    StatusCodeEnum(int code, String message){
         this.code = code;
-        this.msg = msg;
+        this.message = message;
     }
 
     public int getCode() {
         return code;
     }
 
-    public String getMsg() {
-        return msg;
+    public String getMessage() {
+        return message;
     }
 }

@@ -4,11 +4,13 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author BaGuangHui
+ */
 public class QueryInfo {
     private String typeName;
-    private Class modelClass;
     private List<String> fields;
-    private Map<String, Method> getMethodMap;
+    private Map<String, Method> readMethodMap;
     private Map<String,String> conditionNameMap;
 
     public String getTypeName() {
@@ -27,12 +29,12 @@ public class QueryInfo {
         this.fields = fields;
     }
 
-    public Map<String, Method> getGetMethodMap() {
-        return getMethodMap;
+    public Map<String, Method> getReadMethodMap() {
+        return readMethodMap;
     }
 
-    public void setGetMethodMap(Map<String, Method> getMethodMap) {
-        this.getMethodMap = getMethodMap;
+    public void setReadMethodMap(Map<String, Method> readMethodMap) {
+        this.readMethodMap = readMethodMap;
     }
 
     public Map<String, String> getConditionNameMap() {
@@ -41,13 +43,5 @@ public class QueryInfo {
 
     public void setConditionNameMap(Map<String, String> conditionNameMap) {
         this.conditionNameMap = conditionNameMap;
-    }
-
-    public Class getModelClass() {
-        return modelClass;
-    }
-
-    public void setModelClass(Class modelClass) {
-        this.modelClass = modelClass;
     }
 }

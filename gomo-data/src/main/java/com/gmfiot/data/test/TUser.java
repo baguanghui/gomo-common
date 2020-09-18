@@ -1,8 +1,7 @@
-package com.gmfiot.data;
+package com.gmfiot.data.test;
 
 import com.gmfiot.core.model.BaseModel;
-import com.gmfiot.data.annotation.Column;
-import com.gmfiot.data.annotation.Table;
+import com.gmfiot.data.test.TUserCredential;
 
 /**
  * @author ThinkPad
@@ -16,6 +15,8 @@ public class TUser extends BaseModel {
     private String referenceId;
 
     private Integer directory;
+
+    private TUserCredential userCredential;
 
     public String getName() {
         return name;
@@ -55,6 +56,14 @@ public class TUser extends BaseModel {
 
     public void setDirectory(Integer directory) {
         this.directory = directory;
+    }
+
+    public TUserCredential getUserCredential() {
+        return userCredential;
+    }
+
+    public void setUserCredential(TUserCredential userCredential) {
+        this.userCredential = userCredential;
     }
 
     @Override

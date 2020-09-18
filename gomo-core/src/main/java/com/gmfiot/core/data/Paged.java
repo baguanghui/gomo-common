@@ -3,17 +3,18 @@ package com.gmfiot.core.data;
 import com.gmfiot.core.BusinessException;
 
 import java.io.Serializable;
+import java.util.List;
+
 
 /**
- * 分页数据结构
- * @author ThinkPad
+ * @author BaGuangHui
  * @param <T>
  */
 public class Paged<T> implements Serializable {
 
     public Paged(){}
 
-    public Paged(T[] items,int count){
+    public Paged(List<T> items,int count){
         if(items == null){
             throw new BusinessException();
         }
@@ -21,12 +22,12 @@ public class Paged<T> implements Serializable {
         this.count = Math.max(0,count);
     }
 
-    public Paged(T[] items){
-        this(items, items.length);
+    public Paged(List<T> items){
+        this(items, items.size());
     }
 
     private int count;
-    private T[] items;
+    private List<T> items;
 
     /**
      * 创建分页对象
@@ -35,7 +36,7 @@ public class Paged<T> implements Serializable {
      * @param <T>
      * @return
      */
-    public static <T> Paged<T> create(T[] items,int count){
+    public static <T> Paged<T> create(List<T> items,int count){
         return new Paged<>(items,count);
     }
 
@@ -45,7 +46,7 @@ public class Paged<T> implements Serializable {
      * @param <T>
      * @return
      */
-    public static <T> Paged<T> create(T[] items){
+    public static <T> Paged<T> create(List<T> items){
         return new Paged<>(items);
     }
 }

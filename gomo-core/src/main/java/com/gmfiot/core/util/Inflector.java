@@ -2,12 +2,11 @@ package com.gmfiot.core.util;
 
 import java.util.*;
 import java.util.regex.*;
-/**
- *
- *	单复数转换类
- * 2018年12月30日
- */
 
+/**
+ * 单复数转换类
+ * @author BaGuangHui
+ */
 public class Inflector {
 
     private static final Pattern UNDERSCORE_PATTERN_1 = Pattern.compile("([A-Z]+)([A-Z][a-z])");

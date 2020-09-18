@@ -1,7 +1,10 @@
 package com.gmfiot.data.sql;
 
+/**
+ * @author BaGuangHui
+ */
 public interface SqlBuilder {
     SqlBuilder build(SqlTypeEnum sqlTypeEnum);
-    @Override
-    String toString();
+    SqlBuilder setSqlPlaceholder(SqlPlaceholderEnum sqlPlaceholderEnum);
+    SqlPlaceholderEnum getSqlPlaceholder();
 }

@@ -1,5 +1,6 @@
-package com.gmfiot.data;
+package com.gmfiot.data.test;
 
+import com.gmfiot.data.sql.SqlPlaceholderEnum;
 import com.gmfiot.data.sql.SqlServerSqlBuilder;
 import com.gmfiot.data.sql.SqlTypeEnum;
 
@@ -45,15 +46,20 @@ public class TestDemo {
 
         userQuery.setOrId(1002L);
         userQuery.setOrName("张三");
-        //userQuery.setModelClass(TUser.class);
+        userQuery.setModelClass(TUser.class);
 
         var sql =  SqlServerSqlBuilder
                 //.getBuilderForQuery(userQuery)
-                .getBuilder(TUser.class)
-                .build(SqlTypeEnum.DELETE)
-//                .build(SqlTypeEnum.WHERE)
-//                .build(SqlTypeEnum.ORDERBY)
-                //.build(SqlTypeEnum.OFFSET_FETCH)
+                .getBuilder(TUser.class,userQuery)
+                .setSqlPlaceholder(SqlPlaceholderEnum.HASH_SIGN)
+                .build(SqlTypeEnum.SELECT)
+                //.build(SqlTypeEnum.DISTINCT)
+                //.build(SqlTypeEnum.TOP)
+                .build(SqlTypeEnum.WHERE)
+                .build(SqlTypeEnum.GROUP_BY)
+                .build(SqlTypeEnum.HAVING)
+                .build(SqlTypeEnum.ORDER_BY)
+                .build(SqlTypeEnum.OFFSET_FETCH)
                 .toString();
         System.out.println(sql);
     }

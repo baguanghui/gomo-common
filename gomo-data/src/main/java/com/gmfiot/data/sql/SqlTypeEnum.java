@@ -1,14 +1,19 @@
 package com.gmfiot.data.sql;
 
+/**
+ * @author BaGuangHui
+ */
 public enum SqlTypeEnum {
     INSERT,
     DELETE,
     UPDATE,
     SELECT,
-    WHERE,
-    ORDERBY,
+    COUNT,
     TOP,
-    OFFSET_FETCH,
-    GROUPBY,
-    HAVING
+    DISTINCT,
+    WHERE,
+    GROUP_BY,
+    HAVING,
+    ORDER_BY,
+    OFFSET_FETCH
 }
