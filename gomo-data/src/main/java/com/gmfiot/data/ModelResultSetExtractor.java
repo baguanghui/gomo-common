@@ -32,10 +32,11 @@ public class ModelResultSetExtractor<T> implements ResultSetExtractor<List<T>> {
             var columnCount = rsMetaData.getColumnCount();
             TableInfo tableInfo = SqlMappingData.getTableInfo(mappedClass);
             var columnInfoList = tableInfo.getFieldColumnMap().values();
+
             while (resultSet.next()){
                 T mappedObject = ReflectionUtil.newInstance(mappedClass);
                 for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
-                    var columnName = rsMetaData.getColumnName(columnCount);
+                    var columnName = rsMetaData.getColumnName(columnIndex);
                     var columnInfo = columnInfoList.stream().filter(p -> p.getName().equalsIgnoreCase(columnName)).findFirst().orElse(null);
                     if(columnInfo == null){
                         continue;

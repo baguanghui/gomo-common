@@ -1,11 +1,13 @@
 package com.gmfiot.core.data;
 
+import java.io.Serializable;
+
 /**
  * 数据查询抽象类，用户表查询
  * @author BaGuangHui
  *
  */
-public class Query {
+public class Query implements Serializable {
 
     private Integer skip = 0;
     private Integer take = 20;

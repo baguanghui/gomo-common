@@ -4,7 +4,7 @@ package com.gmfiot.core;
  * uncheck 业务异常
  * @author BaGuangHui
  */
-public class BusinessException extends RuntimeException {
+public class BusinessException extends RuntimeException  {
     private int code;
     public BusinessException(){}
 

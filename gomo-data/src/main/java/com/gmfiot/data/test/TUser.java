@@ -1,11 +1,13 @@
 package com.gmfiot.data.test;
 
 import com.gmfiot.core.model.BaseModel;
+import com.gmfiot.data.annotation.Table;
 import com.gmfiot.data.test.TUserCredential;
 
 /**
  * @author ThinkPad
  */
+@Table( name = "Users")
 public class TUser extends BaseModel {
 
     private String name;

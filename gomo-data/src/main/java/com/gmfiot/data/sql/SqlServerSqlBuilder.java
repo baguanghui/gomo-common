@@ -173,9 +173,11 @@ public class SqlServerSqlBuilder implements SqlBuilder {
      */
     private void buildDelete(){
         var tableInfo = SqlMappingData.getTableInfo(modelClass);
-        sqlStringBuilder.append("DELETE " + tableInfo.getName());
+        sqlStringBuilder.append("DELETE ");
+        sqlStringBuilder.append(tableInfo.getName());
+        sqlStringBuilder.append(" ");
         if(query == null){
-            sqlStringBuilder.append(" WHERE id = ");
+            sqlStringBuilder.append("WHERE id = ");
             sqlStringBuilder.append(getSqlPlaceholderSign("id"));
         }
     }
@@ -244,6 +246,7 @@ public class SqlServerSqlBuilder implements SqlBuilder {
                 //.filter(p -> !p.endsWith("GroupBy"))
                 .collect(toList());
         var orFields = queryMap.keySet().stream()
+                .filter(p -> !PAGED_FIELDS.contains(p))
                 .filter(p -> p.startsWith("or"))
                 .collect(toList());
 
@@ -288,11 +291,15 @@ public class SqlServerSqlBuilder implements SqlBuilder {
             var filedValue = queryMap.get(andField);
             if (filedValue.getClass().isArray() && andField.endsWith("s")){
                 var valueArray = (Object[])filedValue;
-                var inSeq = "";
-                if(filedValue instanceof String[]){
-                    inSeq = Arrays.stream(valueArray).map(p -> String.format("\'%s\'",p)).collect(joining(","));
-                } else if(filedValue instanceof Object[]){
-                    inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
+                var inSeq = new StringBuilder();
+                if(filedValue instanceof Object[]){
+                    for (int i = 0; i < valueArray.length; i++) {
+                        inSeq.append(getSqlPlaceholderSign(andField + i));
+                        inSeq.append(",");
+                    }
+                    if(valueArray.length > 0){
+                        inSeq.deleteCharAt(inSeq.length() - 1);
+                    }
                 }
                 sqlStringBuilder.append(String.format("%s in (%s) AND ",columnName,inSeq));
             } else if(andField.endsWith("NotEquals")) {
@@ -306,11 +313,21 @@ public class SqlServerSqlBuilder implements SqlBuilder {
                 sqlStringBuilder.append(String.format("%s LIKE CONCAT('%%',%s,'%%') AND ",columnName,getSqlPlaceholderSign(andField)));
             } else if(andField.endsWith("NotIn")) {
                 var valueArray = (Object[])filedValue;
-                var inSeq = "";
-                if(filedValue instanceof String[]){
-                    inSeq = Arrays.stream(valueArray).map(p -> String.format("'%s'",p)).collect(joining(","));
-                } else if(filedValue instanceof Object[]){
-                    inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
+//                var inSeq = "";
+//                if(filedValue instanceof String[]){
+//                    inSeq = Arrays.stream(valueArray).map(p -> String.format("'%s'",p)).collect(joining(","));
+//                } else if(filedValue instanceof Object[]){
+//                    inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
+//                }
+                var inSeq = new StringBuilder();
+                if(filedValue instanceof Object[]){
+                    for (int i = 0; i < valueArray.length; i++) {
+                        inSeq.append(getSqlPlaceholderSign(andField + i));
+                        inSeq.append(",");
+                    }
+                    if(valueArray.length > 0){
+                        inSeq.deleteCharAt(inSeq.length() - 1);
+                    }
                 }
                 sqlStringBuilder.append(String.format("%s NOT IN (%s) AND ",columnName,inSeq));
             } else if(andField.endsWith("StartsWith")){

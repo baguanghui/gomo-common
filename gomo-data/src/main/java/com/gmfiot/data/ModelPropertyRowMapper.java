@@ -64,7 +64,7 @@ public class ModelPropertyRowMapper<T> implements RowMapper<T> {
         T mappedObject = ReflectionUtil.newInstance(mappedClass);
         var columnInfoList = tableInfo.getFieldColumnMap().values();
         for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
-            var columnName = rsMetaData.getColumnName(columnCount);
+            var columnName = rsMetaData.getColumnName(columnIndex);
             var columnInfo = columnInfoList.stream().filter(p -> p.getName().equalsIgnoreCase(columnName)).findFirst().orElse(null);
             if(columnInfo == null){
                 continue;

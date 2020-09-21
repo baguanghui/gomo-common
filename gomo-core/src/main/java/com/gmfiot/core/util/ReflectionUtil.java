@@ -4,6 +4,8 @@ import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.util.*;
 
+import static java.util.stream.Collectors.joining;
+
 
 /**
  * @author BaGuangHui
@@ -119,15 +121,50 @@ public class ReflectionUtil {
             for(var fieldName : fieldList)
             {
                 var method = clazz.getMethod("get" + StringUtil.capitalize(fieldName));
-                var retValue = method.invoke(object);
-                if(retValue != null){
-                    notNullFieldValueMap.putIfAbsent(fieldName,retValue);
+                var filedValue = method.invoke(object);
+                if(filedValue != null){
+                    if(filedValue instanceof Object[]){
+                        var items = (Object[])filedValue;
+                        for (int i = 0; i < items.length; i++) {
+                            notNullFieldValueMap.putIfAbsent(fieldName + i, items[i]);
+                        }
+                    }
+//                    else if(filedValue instanceof String[]){
+//                        //inSeq = Arrays.stream(valueArray).map(p -> p.toString()).collect(joining(","));
+//                        var items = (String[])filedValue;
+//                        for (int i = 0; i < items.length; i++) {
+//                            notNullFieldValueMap.putIfAbsent(fieldName + i, items[i]);
+//                        }
+//                    }
+                    notNullFieldValueMap.putIfAbsent(fieldName,filedValue);
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return notNullFieldValueMap;
+    }
+
+    /**
+     * 获取所有非空的字段名，字段值字典Map
+     * @param object
+     * @return
+     */
+    public static Map<String,Object> getFieldValueMap(Object object) {
+        Map<String,Object> fieldValueMap = new HashMap<>();
+        var clazz = object.getClass();
+        var fieldList = getAllFields(clazz);
+        try {
+            for(var fieldName : fieldList)
+            {
+                var method = clazz.getMethod("get" + StringUtil.capitalize(fieldName));
+                var retValue = method.invoke(object);
+                fieldValueMap.putIfAbsent(fieldName,retValue);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return fieldValueMap;
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.gmfiot.data.test;
 
+import com.gmfiot.core.util.ReflectionUtil;
+import com.gmfiot.core.util.StringUtil;
 import com.gmfiot.data.sql.SqlPlaceholderEnum;
 import com.gmfiot.data.sql.SqlServerSqlBuilder;
 import com.gmfiot.data.sql.SqlTypeEnum;
@@ -17,6 +19,12 @@ public class TestDemo {
         user.setName("张三");
         user.setStatus(1);
         user.setCreatedAt(new Date());
+//        Map<String,String> paramsMap = new HashMap<>();
+//        paramsMap.put("code","123456");
+
+        String template = "用户Id:{id},用户名：{name}";
+        var text = StringUtil.getTemplateText(user,template);
+        System.out.println(text);
 
 //        var nullColumns = SqlServerSqlGenerator.getNotNullColumns(user);
 //
@@ -30,7 +38,7 @@ public class TestDemo {
         userQuery.setId(10001L);
         userQuery.setIds(new Long[]{1L,2L,3L});
         userQuery.setName("张三");
-//        userQuery.setIdsNotIn(new Long[]{1L,2L,3L});
+        userQuery.setIdsNotIn(new Long[]{1L,2L,3L});
 //        userQuery.setName("张三");
 //        userQuery.setNameNotEquals("李四");
 //        userQuery.setNameContains("李四");
@@ -44,24 +52,22 @@ public class TestDemo {
 //        userQuery.setCreatedAtLessThan(new Date());
 //        userQuery.setNames(new String[]{"张三","李四"});
 
-        userQuery.setOrId(1002L);
-        userQuery.setOrName("张三");
-        userQuery.setModelClass(TUser.class);
-
+//        userQuery.setOrId(1002L);
+//        userQuery.setOrName("张三");
+//        userQuery.setModelClass(TUser.class);
+//
         var sql =  SqlServerSqlBuilder
                 //.getBuilderForQuery(userQuery)
                 .getBuilder(TUser.class,userQuery)
-                .setSqlPlaceholder(SqlPlaceholderEnum.HASH_SIGN)
+                .setSqlPlaceholder(SqlPlaceholderEnum.COLON)
                 .build(SqlTypeEnum.SELECT)
                 //.build(SqlTypeEnum.DISTINCT)
                 //.build(SqlTypeEnum.TOP)
                 .build(SqlTypeEnum.WHERE)
-                .build(SqlTypeEnum.GROUP_BY)
-                .build(SqlTypeEnum.HAVING)
                 .build(SqlTypeEnum.ORDER_BY)
                 .build(SqlTypeEnum.OFFSET_FETCH)
                 .toString();
-        System.out.println(sql);
+//        System.out.println(sql);
     }
 
     public static String getName(TUser u){

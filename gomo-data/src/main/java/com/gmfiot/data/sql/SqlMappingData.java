@@ -188,9 +188,9 @@ public final class SqlMappingData {
                 case "byte[]":
                     return resultSet.getBytes(columnindex);
                 case "java.util.Date":
-                    return resultSet.getDate(columnindex);
+                    return resultSet.getTimestamp(columnindex);
                 case "java.sql.Date":
-                    return resultSet.getDate(columnindex);
+                    return resultSet.getTimestamp(columnindex);
                 case "java.sql.Time":
                     return resultSet.getTime(columnindex);
                 case "java.sql.Timestamp":

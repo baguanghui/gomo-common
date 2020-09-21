@@ -29,7 +29,7 @@ public interface DataProvider {
 
     <T> Paged<T> selectPaged(Object query,Class<T> modelClass);
 
-    Integer Count(Object query,Class<?> modelClass);
+    Integer count(Object query,Class<?> modelClass);
 
     Long getId();
 

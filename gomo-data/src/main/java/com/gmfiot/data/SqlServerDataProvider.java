@@ -9,9 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * @author BaGuangHui
@@ -43,8 +45,6 @@ public class SqlServerDataProvider implements DataProvider {
                 .toString();
 
         var paramMap = ReflectionUtil.getNotNullFieldValueMap(entity);
-
-        //var paramSource = new BeanPropertySqlParameterSource(entity);
         return jdbcTemplate.update(sql,paramMap);
     }
 
@@ -72,7 +72,8 @@ public class SqlServerDataProvider implements DataProvider {
     public Integer delete(Object query, Class modelClass) {
         var sql = SqlServerSqlBuilder.getBuilder(modelClass,query)
                 .setSqlPlaceholder(SqlPlaceholderEnum.COLON)
-                .build(SqlTypeEnum.UPDATE)
+                .build(SqlTypeEnum.DELETE)
+                .build(SqlTypeEnum.WHERE)
                 .toString();
         var paramMap = ReflectionUtil.getNotNullFieldValueMap(query);
         return jdbcTemplate.update(sql,paramMap);
@@ -85,15 +86,6 @@ public class SqlServerDataProvider implements DataProvider {
                 .build(SqlTypeEnum.SELECT)
                 .toString();
         var paramMap = Map.of("id", id);
-//        namedParameterJdbcTemplate.query(sql, paramMap, new ResultSetExtractor<T>() {
-//            @Override
-//            public T extractData(ResultSet resultSet) throws SQLException, DataAccessException {
-//                return null;
-//            }
-//        });
-//        });
-        //DataSourceTransactionManager
-        //TransactionStatus transactionStatus;
         return jdbcTemplate.queryForObject(sql, paramMap, new ModelPropertyRowMapper<T>(modelClass));
     }
 
@@ -120,18 +112,17 @@ public class SqlServerDataProvider implements DataProvider {
                 .toString();
         var paramMap = ReflectionUtil.getNotNullFieldValueMap(query);
         var modelList = jdbcTemplate.query(sql,paramMap,new ModelResultSetExtractor<T>(modelClass));
-        var modelCount = Count(query,modelClass);
+        var modelCount = count(query,modelClass);
         var pagedResult = new Paged<T>(modelList,modelCount);
         return pagedResult;
     }
 
     @Override
-    public Integer Count(Object query, Class<?> modelClass) {
+    public Integer count(Object query, Class<?> modelClass) {
         var sql = SqlServerSqlBuilder.getBuilder(modelClass,query)
                 .setSqlPlaceholder(SqlPlaceholderEnum.COLON)
                 .build(SqlTypeEnum.COUNT)
                 .build(SqlTypeEnum.WHERE)
-                .build(SqlTypeEnum.OFFSET_FETCH)
                 .toString();
         var paramMap = ReflectionUtil.getNotNullFieldValueMap(query);
         return jdbcTemplate.queryForObject(sql,paramMap,Integer.class);
@@ -144,10 +135,11 @@ public class SqlServerDataProvider implements DataProvider {
         return jdbcTemplate.queryForObject(sql,map,Long.class);
     }
 
-    public void transactionTest(){
-        transactionTemplate.executeWithoutResult(status -> {
-            //insert()
-            //update()
-        });
+    public <T> T executeInTransaction(TransactionCallback<T> transactionCallback){
+        return transactionTemplate.execute(transactionCallback);
+    }
+
+    public void executeInTransaction(Consumer<TransactionStatus> action){
+        transactionTemplate.executeWithoutResult(action);
     }
 }

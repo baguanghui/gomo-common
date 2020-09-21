@@ -49,4 +49,20 @@ public class Paged<T> implements Serializable {
     public static <T> Paged<T> create(List<T> items){
         return new Paged<>(items);
     }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+    public List<T> getItems() {
+        return items;
+    }
+
+    public void setItems(List<T> items) {
+        this.items = items;
+    }
 }
