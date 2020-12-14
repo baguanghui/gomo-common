@@ -2,16 +2,24 @@ package com.gmfiot.data.test;
 
 import com.alibaba.druid.pool.DruidDataSourceFactory;
 import com.gmfiot.data.SqlServerDataProvider;
+import jdk.jfr.Frequency;
+import org.springframework.beans.factory.annotation.Required;
 import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.io.*;
 import java.util.Properties;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * @author BaGuangHui
@@ -19,6 +27,7 @@ import java.util.Properties;
 //@Configuration
 //@PropertySource(value = "classpath:sqlserver-druid.properties")
 //@ComponentScan(basePackages = {"com.gmfiot.data"})
+//@EnableScheduling
 public class SpringConfig {
 
     //数据源
@@ -42,6 +51,7 @@ public class SpringConfig {
     }
 
     //jdbc 模板
+
     @Bean
     public NamedParameterJdbcTemplate namedParameterJdbcTemplate(DataSource dataSource){
         return new NamedParameterJdbcTemplate(dataSource);
@@ -59,12 +69,24 @@ public class SpringConfig {
         return new TransactionTemplate(platformTransactionManager);
     }
 
+//    @Bean(destroyMethod = "shutdown")
+//    public Executor taskExecutor(){
+//        return Executors.newScheduledThreadPool(20);
+//    }
+
     public static void main(String[] args) throws IOException {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(SpringConfig.class);
         //context.refresh();
         //context.getEnvironment().setConversionService();
         //context.addApplicationListener(new ContextListener());
         SqlServerDataProvider dataProvider = context.getBean(SqlServerDataProvider.class);
+        var lazyComponent = context.getBean(LazyComponent.class);
+        System.out.println(lazyComponent.testValue);
+
+
+
+        //ScheduledExecutorService scheduledExecutorService;
+
 //        var id = dataProvider.getId();
 //        var user = new TUser();
 //        user.setId(id);
@@ -91,6 +113,7 @@ public class SpringConfig {
 //        });
 //        context.start();
 //        context.stop();
+        System.in.read();
         context.close();
     }
 

@@ -51,19 +51,19 @@ public class StringUtil {
     }
 
     /**
-     * 解析字符串模板，把占位符替换成对应的对象值
+     * 解析字符串模板，把占位符替换成对应的对象值 "用户Id:${id},用户名：${name}"
      * @param object
      * @param template
      * @return
      */
     public static String getTemplateText(Object object,String template){
         var fieldValueMap = ReflectionUtil.getFieldValueMap(object);
-        String regex = "\\{\\w*}";
+        String regex = "\\$\\{\\w*}";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(template);
         while (matcher.find()){
             String group = matcher.group();
-            String key = group.substring(1, group.length() - 1);
+            String key = group.substring(2, group.length() - 1);
             if (!fieldValueMap.containsKey(key)) {
                 throw new BusinessException("not found key：" + key);
             }

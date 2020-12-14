@@ -6,10 +6,12 @@ import com.gmfiot.data.sql.SqlPlaceholderEnum;
 import com.gmfiot.data.sql.SqlServerSqlBuilder;
 import com.gmfiot.data.sql.SqlTypeEnum;
 
+import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class TestDemo {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 //        var tableInfo = SqlServerSqlGenerator.getTableInfo(User.class);
 //        tableInfo = SqlServerSqlGenerator.getTableInfo(User.class);
         //System.out.println(tableInfo);
@@ -22,9 +24,36 @@ public class TestDemo {
 //        Map<String,String> paramsMap = new HashMap<>();
 //        paramsMap.put("code","123456");
 
-        String template = "用户Id:{id},用户名：{name}";
-        var text = StringUtil.getTemplateText(user,template);
-        System.out.println(text);
+
+//        ExecutorService fixedThreadPool = new ThreadPoolExecutor(3,3,0L, TimeUnit.MILLISECONDS,new LinkedBlockingQueue<Runnable>());
+//
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("执行任务啦1");
+            }
+        };
+//
+//        fixedThreadPool.submit(task);
+//        fixedThreadPool.submit(() -> {
+//            System.out.println("执行任务啦2");
+//        });
+//        fixedThreadPool.submit(() -> {
+//            System.out.println("执行任务啦3");
+//        });
+//
+//        System.in.read();
+
+//        ScheduledExecutorService scheduledExecutorService = new ScheduledThreadPoolExecutor(4);
+//
+//        scheduledExecutorService.scheduleAtFixedRate(task,10,1000,TimeUnit.MILLISECONDS);
+
+
+        ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+        singleThreadExecutor.execute(task);
+        System.in.read();
+
+
 
 //        var nullColumns = SqlServerSqlGenerator.getNotNullColumns(user);
 //
