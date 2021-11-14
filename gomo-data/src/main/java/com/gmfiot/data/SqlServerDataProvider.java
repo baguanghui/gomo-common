@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -46,6 +48,23 @@ public class SqlServerDataProvider implements DataProvider {
 
         var paramMap = ReflectionUtil.getNotNullFieldValueMap(entity);
         return jdbcTemplate.update(sql,paramMap);
+    }
+
+    @Override
+    public <T> Integer insert(ArrayList<T> entities) {
+        var firstEntity = entities.stream().findFirst();
+        if(firstEntity.isEmpty()){
+            throw new RuntimeException("列表不能为空");
+        }
+        var affectRows =  executeInTransaction(transactionStatus -> {
+            var count = 0;
+            for(var entity : entities)  {
+                insert(entity);
+                count++;
+            }
+            return count;
+        });
+        return affectRows;
     }
 
     @Override
@@ -102,6 +121,12 @@ public class SqlServerDataProvider implements DataProvider {
     }
 
     @Override
+    public <T> List<T> select(String sql, Object query, Class<T> modelClass) {
+        var paramMap = ReflectionUtil.getNotNullFieldValueMap(query);
+        return jdbcTemplate.query(sql, paramMap, new ModelResultSetExtractor<T>(modelClass));
+    }
+
+    @Override
     public <T> Paged<T> selectPaged(Object query, Class<T> modelClass) {
         var sql = SqlServerSqlBuilder.getBuilder(modelClass,query)
                 .setSqlPlaceholder(SqlPlaceholderEnum.COLON)
@@ -110,6 +135,15 @@ public class SqlServerDataProvider implements DataProvider {
                 .build(SqlTypeEnum.ORDER_BY)
                 .build(SqlTypeEnum.OFFSET_FETCH)
                 .toString();
+        var paramMap = ReflectionUtil.getNotNullFieldValueMap(query);
+        var modelList = jdbcTemplate.query(sql,paramMap,new ModelResultSetExtractor<T>(modelClass));
+        var modelCount = count(query,modelClass);
+        var pagedResult = new Paged<T>(modelList,modelCount);
+        return pagedResult;
+    }
+
+    @Override
+    public <T> Paged<T> selectPaged(String sql, Object query, Class<T> modelClass) {
         var paramMap = ReflectionUtil.getNotNullFieldValueMap(query);
         var modelList = jdbcTemplate.query(sql,paramMap,new ModelResultSetExtractor<T>(modelClass));
         var modelCount = count(query,modelClass);

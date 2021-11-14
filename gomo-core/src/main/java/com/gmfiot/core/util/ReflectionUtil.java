@@ -115,6 +115,9 @@ public class ReflectionUtil {
      */
     public static Map<String,Object> getNotNullFieldValueMap(Object object) {
         Map<String,Object> notNullFieldValueMap = new HashMap<>();
+        if(object == null){
+            return  notNullFieldValueMap;
+        }
         var clazz = object.getClass();
         var fieldList = getAllFields(clazz);
         try {

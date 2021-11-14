@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -16,6 +17,8 @@ import java.util.List;
 public interface DataProvider {
 
     <T> Integer insert(T entity);
+
+    <T> Integer insert(ArrayList<T> entities);
 
     <T> Integer update(T entity);
 
@@ -27,7 +30,11 @@ public interface DataProvider {
 
     <T> List<T> select(Object query,Class<T> modelClass);
 
+    <T> List<T> select(String sql,Object query,Class<T> modelClass);
+
     <T> Paged<T> selectPaged(Object query,Class<T> modelClass);
+
+    <T> Paged<T> selectPaged(String sql,Object query,Class<T> modelClass);
 
     Integer count(Object query,Class<?> modelClass);
 
